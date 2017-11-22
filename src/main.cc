@@ -3,10 +3,11 @@
 #include <string>
 #include <vector>
 
+#include "./client.h"
 #include "./encoder.h"
 
 namespace {
-// copied from so
+// copied from stack overflow
 std::string string_to_hex(const std::string& input) {
   static const char* const lut = "0123456789abcdef";
   size_t len = input.length();
@@ -30,7 +31,10 @@ static const std::vector<std::string> mainSeeds = {
 }  // namespace
 
 int main(int argc, char** argv) {
+  spv::NetAddr addr;
   spv::Encoder enc("version");
+  spv::Client client;
+  client.send_version(&enc, 100, addr);
   std::cout << string_to_hex(enc.serialize()) << "\n";
   return 0;
 }

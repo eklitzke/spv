@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 
 #include <string>
 
@@ -18,6 +19,15 @@
 #define CHECKSUM_OFFSET 20
 
 namespace spv {
+struct NetAddr {
+  uint32_t time;
+  uint64_t services;
+  char addr[16];
+  uint16_t port;
+
+  NetAddr() { memset(this, 0, sizeof(NetAddr)); }
+};
+
 // Buffer represents a byte buffer.
 class Buffer {
  public:
@@ -102,32 +112,75 @@ class Encoder {
   }
 
   template <typename T>
-  void push(T val) {
+  void push_int(T val) {
     buf_.copy(&val, sizeof val);
   }
 
+  inline void push_byte(uint8_t val) { return push_int<uint8_t>(val); }
+
+  template <typename T>
+  void push_time() {
+    time_t tv = time(nullptr);
+    push_int<T>(static_cast<T>(tv));
+  }
+
+  inline void push_bool(bool val) { return push_byte(val); }
+
+  void push_string(const std::string &s) {
+    push_varint(s.size());
+    buf_.copy(s.c_str(), s.size());
+  }
+
+  void push_varint(size_t val);
+  void push_addr(const NetAddr &addr);
+
  private:
-  void push_bytes(void *addr, size_t len) { buf_.copy(addr, len); }
+  void push_cstr(const char *addr, size_t len) { buf_.copy(addr, len); }
+  void push_bytes(const void *addr, size_t len) { buf_.copy(addr, len); }
 
   Buffer buf_;
 };
 
 template <>
-void Encoder::push(uint16_t val) {
+void Encoder::push_int(uint16_t val) {
   val = htole16(val);
   buf_.copy(&val, sizeof val);
 }
 
 template <>
-void Encoder::push(uint32_t val) {
+void Encoder::push_int(uint32_t val) {
   val = htole32(val);
   buf_.copy(&val, sizeof val);
 }
 
 template <>
-void Encoder::push(uint64_t val) {
+void Encoder::push_int(uint64_t val) {
   val = htole64(val);
   buf_.copy(&val, sizeof val);
+}
+
+void Encoder::push_varint(size_t val) {
+  if (val < 0xfd) {
+    push_byte(val);
+    return;
+  } else if (val <= 0xffff) {
+    push_byte(0xfd);
+    push_int<uint16_t>(val);
+    return;
+  } else if (val <= 0xffffffff) {
+    push_byte(0xfe);
+    push_int<uint32_t>(val);
+    return;
+  }
+  push_byte(0xff);
+  push_int<uint64_t>(val);
+}
+
+void Encoder::push_addr(const NetAddr &addr) {
+  push_int<uint32_t>(addr.time);
+  push_int<uint64_t>(addr.services);
+  push_bytes(reinterpret_cast<const void *>(&addr.addr), sizeof addr.addr);
+  push_int<uint16_t>(addr.port);
 }
 
 }  // namespace spv
