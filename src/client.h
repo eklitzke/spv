@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <iostream>
+
 #include "./config.h"
 #include "./encoder.h"
 #include "./util.h"
@@ -29,19 +31,25 @@ static const std::vector<std::string> testSeeds = {
 
 class Client {
  public:
-  void send_version(Encoder *enc, int version, const NetAddr *addr) {
-    uint64_t nonce = rand64();
-    enc->push_int<int32_t>(version);  // version
-    enc->push_int<uint64_t>(0);       // services
-    enc->push_time<uint64_t>();       // timestamp
-    enc->push_addr(addr);             // addr_recv
-    enc->push_addr(nullptr);          // addr_from
-    enc->push_int<uint64_t>(nonce);   // nonce
-    enc->push_string(USERAGENT);      // user-agent
-    enc->push_int<uint32_t>(1);       // start height
-    enc->push_bool(false);            // relay
+  Client() : connection_nonce_(rand64()) {}
+  Client(const Client &other) = delete;
+
+  void send_version(int version, const NetAddr *addr) {
+    Encoder enc("version");
+    enc.push_int<int32_t>(version);             // version
+    enc.push_int<uint64_t>(0);                  // services
+    enc.push_time<uint64_t>();                  // timestamp
+    enc.push_addr(addr);                        // addr_recv
+    enc.push_addr(nullptr);                     // addr_from
+    enc.push_int<uint64_t>(connection_nonce_);  // nonce
+    enc.push_string(USERAGENT);                 // user-agent
+    enc.push_int<uint32_t>(1);                  // start height
+    enc.push_bool(false);                       // relay
+
+    std::cout << string_to_hex(enc.serialize()) << "\n";
   }
 
  private:
+  const uint64_t connection_nonce_;
 };
 }  // namespace spv

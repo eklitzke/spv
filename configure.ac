@@ -34,6 +34,15 @@ AS_COMPILER_FLAG([-fdiagnostics-color=auto],
 
 AC_DEFINE([USERAGENT], ["github.com/eklitzke/spv"], [User agent to advertise.])
 
+gitcommit=`cd $srcdir && git describe --always`
+AS_IF([test x"$gitcommit" = x],
+      [versionstr="spv $PACKAGE_VERSION $host_os $host_cpu"],
+      [versionstr="spv $PACKAGE_VERSION (commit $gitcommit) $host_os $host_cpu"])
+
+AC_DEFINE_UNQUOTED(
+  [SPV_VERSION_STR],
+  ["$versionstr"],
+  [A string containing build information.])
 
 AC_SUBST([ERROR_CFLAGS])
 AC_CONFIG_FILES([Makefile
