@@ -36,7 +36,7 @@ class Buffer {
   explicit Buffer(size_t cap)
       : capacity_(cap),
         size_(0),
-        data_(reinterpret_cast<unsigned char *>(malloc(cap))) {
+        data_(reinterpret_cast<unsigned char *>(std::malloc(cap))) {
     if (data_ == nullptr) {
       throw std::bad_alloc();
     }
@@ -94,13 +94,12 @@ class Buffer {
     }
     if (new_capacity > capacity_) {
       // Realloc the buffer, and set the extra bytes to 0 for good hygiene.
-      void *p = realloc(data_, new_capacity);
-      if (p == nullptr) {
+      if (void *mem = std::realloc(data_, new_capacity)) {
+        data_ = static_cast<unsigned char *>(mem);
+        memset(data_ + capacity_, 0, new_capacity - capacity_);
+        capacity_ = new_capacity;
+      } else
         throw std::bad_alloc();
-      }
-      data_ = reinterpret_cast<unsigned char *>(p);
-      memset(data_ + capacity_, 0, new_capacity - capacity_);
-      capacity_ = new_capacity;
     }
   }
 };
