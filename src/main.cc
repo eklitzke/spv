@@ -1,11 +1,25 @@
 #include <cstring>
-#include <sstream>
+#include <iostream>
 #include <string>
 #include <vector>
 
 #include "./encoder.h"
 
-namespace spv {
+namespace {
+// copied from so
+std::string string_to_hex(const std::string& input) {
+  static const char* const lut = "0123456789abcdef";
+  size_t len = input.length();
+
+  std::string output;
+  output.reserve(2 * len);
+  for (size_t i = 0; i < len; ++i) {
+    const unsigned char c = input[i];
+    output.push_back(lut[c >> 4]);
+    output.push_back(lut[c & 15]);
+  }
+  return output;
+}
 
 // copied from chainparams.cpp
 static const std::vector<std::string> mainSeeds = {
@@ -13,7 +27,10 @@ static const std::vector<std::string> mainSeeds = {
     "dnsseed.bitcoin.dashjr.org",    "seed.bitcoinstats.com",
     "seed.bitcoin.jonasschnelli.ch", "seed.btc.petertodd.org",
 };
+}  // namespace
 
-}  // namespace spv
-
-int main(int argc, char **argv) { return 0; }
+int main(int argc, char** argv) {
+  spv::Encoder enc("version");
+  std::cout << string_to_hex(enc.serialize()) << "\n";
+  return 0;
+}

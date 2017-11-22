@@ -22,9 +22,13 @@ namespace spv {
 class Buffer {
  public:
   Buffer() : Buffer(64) {}
-  explicit Buffer(size_t cap) : capacity_(cap), size_(0), data_(malloc(cap)) {
+  explicit Buffer(size_t cap)
+      : capacity_(cap),
+        size_(0),
+        data_(reinterpret_cast<unsigned char *>(malloc(cap))) {
     assert(data_ != nullptr);
   }
+  ~Buffer() { free(data_); }
 
   // allocate message headers, reserving the required space
   void allocate_headers(const std::string &cmd) {
@@ -32,11 +36,13 @@ class Buffer {
     assert(cmd.size() <= 12);
     ensure_capacity(MSG_HEADER_SIZE);
 
-    static const uint32_t testnet_magic = 0x0B110907;
+    static const uint32_t testnet_magic = 0x0b110907;
     copy(&testnet_magic, sizeof testnet_magic);
 
     char cmd_bytes[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     memmove(&cmd_bytes, cmd.c_str(), cmd.size());
+
+    size_ = 24;
   }
 
   void finish_headers() {
@@ -45,8 +51,10 @@ class Buffer {
     memmove(data_ + PAYLOAD_OFFSET, &len, sizeof len);
 
     // insert the checksum
-    unsigned char hash[32];
-    picosha2::hash256(data_ + MSG_HEADER_SIZE, data_ + size_, &hash, &hash + 4);
+    std::vector<unsigned char> hash1(32), hash2(32);
+    picosha2::hash256(data_ + MSG_HEADER_SIZE, data_ + size_, hash1);
+    picosha2::hash256(hash1, hash2);
+    memmove(hash2.data(), data_ + CHECKSUM_OFFSET, 4);
   }
 
   void copy(const void *addr, size_t len) {
@@ -56,25 +64,41 @@ class Buffer {
   }
 
   inline size_t size() const { return size_; }
-  inline void *data() const { return data_; }
+  inline unsigned char *data() const { return data_; }
+  inline std::string string() const {
+    return std::string(reinterpret_cast<const char *>(data_), size_);
+  }
 
  private:
   size_t capacity_;
   size_t size_;
-  void *data_;
+  unsigned char *data_;
 
   // Ensure there's enough capacity to add len bytes.
   void ensure_capacity(size_t len) {
+    size_t orig_capacity = capacity_;
     while (size_ + len > capacity_) {
       capacity_ *= 2;
     }
-    data_ = realloc(data_, capacity_);
+    if (capacity_ > orig_capacity) {
+      // Realloc the buffer, and set the extra bytes to 0 for good hygiene.
+      data_ = reinterpret_cast<unsigned char *>(realloc(data_, capacity_));
+      memset(data_ + size_, 0, capacity_ - orig_capacity);
+    }
   }
 };
 
 // Encoder can encode data.
 class Encoder {
  public:
+  explicit Encoder(const std::string &command) {
+    if (!command.empty()) {
+      buf_.allocate_headers(command);
+    }
+  }
+
+  inline std::string serialize() { return buf_.string(); }
+
   template <typename T>
   void push(T val) {
     buf_.copy(&val, sizeof val);
