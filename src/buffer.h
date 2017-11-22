@@ -41,7 +41,7 @@ class Buffer {
       throw std::bad_alloc();
     }
   }
-  ~Buffer() { free(data_); }
+  ~Buffer() { std::free(data_); }
 
   // allocate message headers, reserving the required space
   void allocate_headers(const std::string &cmd) {
