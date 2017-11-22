@@ -142,61 +142,18 @@ class Encoder {
 
   inline void push_bool(bool val) { return push_byte(val); }
 
-  void push_string(const std::string &s) {
+  inline void push_string(const std::string &s) {
     push_varint(s.size());
     buf_.copy(s.c_str(), s.size());
   }
 
   void push_varint(size_t val);
-  void push_addr(const NetAddr &addr);
+  void push_addr(const NetAddr *addr);
 
  private:
-  void push_cstr(const char *addr, size_t len) { buf_.copy(addr, len); }
   void push_bytes(const void *addr, size_t len) { buf_.copy(addr, len); }
 
   Buffer buf_;
 };
-
-template <>
-void Encoder::push_int(uint16_t val) {
-  val = htole16(val);
-  buf_.copy(&val, sizeof val);
-}
-
-template <>
-void Encoder::push_int(uint32_t val) {
-  val = htole32(val);
-  buf_.copy(&val, sizeof val);
-}
-
-template <>
-void Encoder::push_int(uint64_t val) {
-  val = htole64(val);
-  buf_.copy(&val, sizeof val);
-}
-
-void Encoder::push_varint(size_t val) {
-  if (val < 0xfd) {
-    push_byte(val);
-    return;
-  } else if (val <= 0xffff) {
-    push_byte(0xfd);
-    push_int<uint16_t>(val);
-    return;
-  } else if (val <= 0xffffffff) {
-    push_byte(0xfe);
-    push_int<uint32_t>(val);
-    return;
-  }
-  push_byte(0xff);
-  push_int<uint64_t>(val);
-}
-
-void Encoder::push_addr(const NetAddr &addr) {
-  push_int<uint32_t>(addr.time);
-  push_int<uint64_t>(addr.services);
-  push_bytes(reinterpret_cast<const void *>(&addr.addr), sizeof addr.addr);
-  push_int<uint16_t>(addr.port);
-}
 
 }  // namespace spv

@@ -26,10 +26,9 @@
 using namespace spv;
 
 int main(int argc, char** argv) {
-  NetAddr addr;
   Encoder enc("version");
   Client client;
-  client.send_version(&enc, 100, addr);
+  client.send_version(&enc, 70001, nullptr);
   std::cout << string_to_hex(enc.serialize()) << "\n";
   return 0;
 }
