@@ -16,14 +16,9 @@
 
 #include "./client.h"
 
-#include <netdb.h>
-#include <sys/socket.h>
-#include <sys/types.h>
 #include <unistd.h>
 
 #include <iostream>
-#include <sstream>
-#include <stdexcept>
 
 namespace spv {
 
@@ -53,37 +48,8 @@ void Client::send_version(const NetAddr &addr) {
 
 NetAddr Client::get_addr(const std::string &name, uint16_t port) {
   NetAddr addr(port);
-  addrinfo hints, *servinfo;
-  memset(&hints, 0, sizeof hints);
-  hints.ai_family = AF_UNSPEC;
-  hints.ai_socktype = SOCK_STREAM;
-  if (getaddrinfo(name.c_str(), nullptr, &hints, &servinfo) != 0) {
-    perror("getaddrinfo");
-    abort();
-  }
-  for (addrinfo *p = servinfo; p != nullptr; p = p->ai_next) {
-    int sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
-    if (sockfd == -1) {
-      perror("socket()");
-      continue;
-    }
-
-    // TODO: make this non-blocking
-    if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-      std::stringstream os;
-      os << "Failed to connect to host " << name << " (port = " << port
-         << ") using address " << p->ai_addr;
-      std::cerr << os.str() << "\n";
-      close(sockfd);
-      continue;
-    }
-    std::cout << "got connection to " << name << "\n";
-    addr.sock = sockfd;
-    return addr;
-  }
-  std::stringstream os;
-  os << "Failed to connect to host: " << name << " (port = " << port << ")";
-  throw std::runtime_error(os.str());
+  auto tcp = loop_->resource<uvw::TcpHandle>();
+  tcp->connect(name, port);
   return addr;
 }
 }  // namespace spv

@@ -23,6 +23,8 @@
 #include "./encoder.h"
 #include "./util.h"
 
+#include "../third_party/uvw/src/uvw.hpp"
+
 namespace spv {
 // copied from chainparams.cpp
 static const std::vector<std::string> testSeeds = {
@@ -35,7 +37,7 @@ enum { DEFAULT_PORT = 18333 };
 
 class Client {
  public:
-  Client() : connection_nonce_(rand64()) {}
+  Client() : connection_nonce_(rand64()), loop_(uvw::Loop::getDefault()) {}
   Client(const Client &other) = delete;
 
   // Send the version message to these seeds.
@@ -43,6 +45,7 @@ class Client {
 
  private:
   const uint64_t connection_nonce_;
+  std::shared_ptr<uvw::Loop> loop_;
 
   // Get a complete NetAddr from a DNS name
   NetAddr get_addr(const std::string &name, uint16_t port = DEFAULT_PORT);

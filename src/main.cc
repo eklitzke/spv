@@ -21,13 +21,12 @@
 #include <string>
 #include <vector>
 
-#include <event.h>
-
 #include "./client.h"
 #include "./config.h"
-#include "./ctx.h"
 #include "./encoder.h"
 #include "./util.h"
+
+#include "../third_party/uvw/src/uvw.hpp"
 
 using namespace spv;
 
@@ -62,11 +61,8 @@ int main(int argc, char** argv) {
     }
   }
 
-  // init the global context
-  ctx.init();
-
-  // do stuff
   Client client;
   client.send_version_to_seeds();
+  uvw::Loop::getDefault()->run();
   return 0;
 }
