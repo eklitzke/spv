@@ -60,6 +60,6 @@ int main(int argc, char** argv) {
   }
 
   Client client;
-  client.send_version(70001, nullptr);
+  client.send_version_to_seeds();
   return 0;
 }

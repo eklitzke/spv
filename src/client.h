@@ -16,7 +16,8 @@
 
 #pragma once
 
-#include <iostream>
+#include <string>
+#include <vector>
 
 #include "./config.h"
 #include "./encoder.h"
@@ -34,22 +35,16 @@ class Client {
   Client() : connection_nonce_(rand64()) {}
   Client(const Client &other) = delete;
 
-  void send_version(int version, const NetAddr *addr) {
-    Encoder enc("version");
-    enc.push_int<int32_t>(version);             // version
-    enc.push_int<uint64_t>(0);                  // services
-    enc.push_time<uint64_t>();                  // timestamp
-    enc.push_addr(addr);                        // addr_recv
-    enc.push_addr(nullptr);                     // addr_from
-    enc.push_int<uint64_t>(connection_nonce_);  // nonce
-    enc.push_string(USERAGENT);                 // user-agent
-    enc.push_int<uint32_t>(1);                  // start height
-    enc.push_bool(false);                       // relay
-
-    std::cout << string_to_hex(enc.serialize()) << "\n";
-  }
+  // Send the version message to these seeds.
+  void send_version_to_seeds(const std::vector<std::string> &seeds = testSeeds);
 
  private:
   const uint64_t connection_nonce_;
+
+  // Get a complete NetAddr from a DNS name
+  NetAddr get_addr(const std::string &name);
+
+  // Send a version message.
+  void send_version(const NetAddr &addr);
 };
 }  // namespace spv
