@@ -9,7 +9,7 @@ useful as a reference.
 
 ## Compiling
 
-To compile you'll need autoconf and automake:
+To compile you'll need autoconf, automake, and a C++11 compiler:
 
 ```bash
 $ ./autogen.sh
@@ -19,7 +19,7 @@ $ make
 
 The `make` command will produce an executable at `src/spv`.
 
-## Dependencies
+### Dependencies
 
 Build dependencies:
 
@@ -31,6 +31,9 @@ Build dependencies:
 Other dependencies/third party libs:
 
  * The `picosha2.h` header file from [okdshin/PicoSHA2](https://github.com/okdshin/PicoSHA2) is included in this project.
+
+This code has been tested with GCC 7.2 on Linux, but it will likely compile
+under Clang (and versions of GCC as far back as 4.4).
 
 ## Licensing
 
