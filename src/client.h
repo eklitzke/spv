@@ -13,6 +13,12 @@ static const std::vector<std::string> mainSeeds = {
     "seed.bitcoin.jonasschnelli.ch", "seed.btc.petertodd.org",
 };
 
+// copied from chainparams.cpp
+static const std::vector<std::string> testSeeds = {
+    "testnet-seed.bitcoin.jonasschnelli.ch", "seed.tbtc.petertodd.org",
+    "testnet-seed.bluematt.me",
+};
+
 class Client {
  public:
   void send_version(Encoder *enc, int version, const NetAddr &addr) {
