@@ -13,11 +13,11 @@
 #include "./picosha2.h"
 
 #define MSG_HEADER_SIZE 24
+#define COMMAND_OFFSET 4
 #define PAYLOAD_OFFSET 16
 #define CHECKSUM_OFFSET 20
 
 namespace spv {
-
 // Buffer represents a byte buffer.
 class Buffer {
  public:
@@ -39,8 +39,7 @@ class Buffer {
     static const uint32_t testnet_magic = 0x0b110907;
     copy(&testnet_magic, sizeof testnet_magic);
 
-    char cmd_bytes[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    memmove(&cmd_bytes, cmd.c_str(), cmd.size());
+    memmove(data_ + COMMAND_OFFSET, cmd.c_str(), cmd.size());
 
     size_ = 24;
   }
@@ -54,7 +53,7 @@ class Buffer {
     std::vector<unsigned char> hash1(32), hash2(32);
     picosha2::hash256(data_ + MSG_HEADER_SIZE, data_ + size_, hash1);
     picosha2::hash256(hash1, hash2);
-    memmove(hash2.data(), data_ + CHECKSUM_OFFSET, 4);
+    memmove(data_ + CHECKSUM_OFFSET, hash2.data(), 4);
   }
 
   void copy(const void *addr, size_t len) {
@@ -97,7 +96,10 @@ class Encoder {
     }
   }
 
-  inline std::string serialize() { return buf_.string(); }
+  inline std::string serialize(bool finish = true) {
+    if (finish) buf_.finish_headers();
+    return buf_.string();
+  }
 
   template <typename T>
   void push(T val) {
