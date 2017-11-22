@@ -2,9 +2,11 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([bitcoin-spv], [0.1], [evan@eklitzke.org])
+AC_INIT([spv], [0.1], [evan@eklitzke.org])
+AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_SRCDIR([src/main.cc])
 AC_CONFIG_HEADERS([src/config.h])
+AC_CONFIG_MACRO_DIR([m4])
 
 AM_INIT_AUTOMAKE([dist-bzip2 foreign subdir-objects -Wall -Werror])
 
@@ -27,6 +29,11 @@ AC_CHECK_TYPES([ptrdiff_t])
 AC_FUNC_REALLOC
 AC_CHECK_FUNCS([memmove])
 
+AS_COMPILER_FLAG([-fdiagnostics-color=auto],
+                 [ERROR_CFLAGS="-fdiagnostics-color=auto"])
+
+
+AC_SUBST([ERROR_CFLAGS])
 AC_CONFIG_FILES([Makefile
                  src/Makefile])
 AC_OUTPUT
