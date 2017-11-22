@@ -1,3 +1,6 @@
 [submodule "third_party/uvw"]
 	path = third_party/uvw
 	url = https://github.com/skypjack/uvw
+[submodule "third_party/PicoSHA2"]
+	path = third_party/PicoSHA2
+	url = https://github.com/okdshin/PicoSHA2

@@ -20,7 +20,7 @@
 #include <cstring>
 #include <vector>
 
-#include "./picosha2.h"
+#include "../third_party/PicoSHA2/picosha2.h"
 
 #define MSG_HEADER_SIZE 24
 #define COMMAND_OFFSET 4

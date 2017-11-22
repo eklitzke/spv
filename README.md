@@ -35,13 +35,10 @@ Build dependencies:
  * pkg-config
  * libuv (version 1.x)
 
-Other dependencies/third party libs:
+Other dependencies/third party libs; these are all included as git submodules:
 
- * The `picosha2.h` header file from
-   [okdshin/PicoSHA2](https://github.com/okdshin/PicoSHA2) is included in this
-   project.
- * This project includes [skypjack/uvw](https://github.com/skypjack/uvw) via a
-   git submodule.
+ * [okdshin/PicoSHA2](https://github.com/okdshin/PicoSHA2)
+ * [skypjack/uvw](https://github.com/skypjack/uvw)
 
 ## Licensing
 
