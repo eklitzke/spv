@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <cassert>
 #include <cstdlib>
 #include <cstring>
 #include <vector>
@@ -36,7 +37,9 @@ class Buffer {
       : capacity_(cap),
         size_(0),
         data_(reinterpret_cast<unsigned char *>(malloc(cap))) {
-    assert(data_ != nullptr);
+    if (data_ == nullptr) {
+      throw std::bad_alloc();
+    }
   }
   ~Buffer() { free(data_); }
 
@@ -91,8 +94,12 @@ class Buffer {
     }
     if (capacity_ > orig_capacity) {
       // Realloc the buffer, and set the extra bytes to 0 for good hygiene.
-      data_ = reinterpret_cast<unsigned char *>(realloc(data_, capacity_));
-      memset(data_ + size_, 0, capacity_ - orig_capacity);
+      void *p = realloc(data_, capacity_);
+      if (p == nullptr) {
+        throw std::bad_alloc();
+      }
+      data_ = reinterpret_cast<unsigned char *>(p);
+      memset(data_ + orig_capacity, 0, capacity_ - orig_capacity);
     }
   }
 };
