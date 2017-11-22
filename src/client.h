@@ -30,6 +30,9 @@ static const std::vector<std::string> testSeeds = {
     "testnet-seed.bluematt.me",
 };
 
+// testnet port
+enum { DEFAULT_PORT = 18333 };
+
 class Client {
  public:
   Client() : connection_nonce_(rand64()) {}
@@ -42,7 +45,7 @@ class Client {
   const uint64_t connection_nonce_;
 
   // Get a complete NetAddr from a DNS name
-  NetAddr get_addr(const std::string &name);
+  NetAddr get_addr(const std::string &name, uint16_t port = DEFAULT_PORT);
 
   // Send a version message.
   void send_version(const NetAddr &addr);
