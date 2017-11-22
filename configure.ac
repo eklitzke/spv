@@ -32,6 +32,8 @@ AC_CHECK_FUNCS([memmove])
 AS_COMPILER_FLAG([-fdiagnostics-color=auto],
                  [ERROR_CFLAGS="-fdiagnostics-color=auto"])
 
+AC_DEFINE([USERAGENT], ["github.com/eklitzke/spv"], [User agent to advertise.])
+
 
 AC_SUBST([ERROR_CFLAGS])
 AC_CONFIG_FILES([Makefile
