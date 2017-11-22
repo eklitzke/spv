@@ -88,18 +88,19 @@ class Buffer {
 
   // Ensure there's enough capacity to add len bytes.
   void ensure_capacity(size_t len) {
-    size_t orig_capacity = capacity_;
-    while (size_ + len > capacity_) {
-      capacity_ *= 2;
+    size_t new_capacity = capacity_;
+    while (size_ + len > new_capacity) {
+      new_capacity *= 2;
     }
-    if (capacity_ > orig_capacity) {
+    if (new_capacity > capacity_) {
       // Realloc the buffer, and set the extra bytes to 0 for good hygiene.
-      void *p = realloc(data_, capacity_);
+      void *p = realloc(data_, new_capacity);
       if (p == nullptr) {
         throw std::bad_alloc();
       }
       data_ = reinterpret_cast<unsigned char *>(p);
-      memset(data_ + orig_capacity, 0, capacity_ - orig_capacity);
+      memset(data_ + capacity_, 0, new_capacity - capacity_);
+      capacity_ = new_capacity;
     }
   }
 };
