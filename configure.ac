@@ -32,6 +32,8 @@ AC_CHECK_FUNCS([memmove])
 AS_COMPILER_FLAG([-fdiagnostics-color=auto],
                  [ERROR_CFLAGS="-fdiagnostics-color=auto"])
 
+PKG_CHECK_MODULES([libevent], [libevent >= 2])
+
 AC_DEFINE([USERAGENT], ["github.com/eklitzke/spv"], [User agent to advertise.])
 
 gitcommit=`cd $srcdir && git describe --always`

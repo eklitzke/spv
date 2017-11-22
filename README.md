@@ -26,7 +26,7 @@ Build dependencies:
  * autoconf
  * automake
  * pkg-config
- * libevent2
+ * libevent (version 2.x)
 
 Other dependencies/third party libs:
 
