@@ -9,7 +9,14 @@ useful as a reference.
 
 ## Compiling
 
-To compile you'll need autoconf, automake, and a C++11 compiler:
+First fetch the third party build dependencies:
+
+```bash
+$ git submodule init
+$ git submodule update
+```
+
+To build `spv`, you'll need autoconf, automake, and a recent (C++14) compiler:
 
 ```bash
 $ ./autogen.sh
@@ -30,11 +37,11 @@ Build dependencies:
 
 Other dependencies/third party libs:
 
- * The `picosha2.h` header file from [okdshin/PicoSHA2](https://github.com/okdshin/PicoSHA2) is included in this project.
- * This project includes [skypjack/uvw](https://github.com/skypjack/uvw) via a git submodule.
-
-This code has been tested with GCC 7.2 on Linux, but it will likely compile
-under Clang (and versions of GCC as far back as 4.4).
+ * The `picosha2.h` header file from
+   [okdshin/PicoSHA2](https://github.com/okdshin/PicoSHA2) is included in this
+   project.
+ * This project includes [skypjack/uvw](https://github.com/skypjack/uvw) via a
+   git submodule.
 
 ## Licensing
 
