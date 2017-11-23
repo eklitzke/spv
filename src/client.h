@@ -26,6 +26,8 @@
 
 #include "../third_party/uvw/src/uvw.hpp"
 
+#define MAX_CONNECTIONS 2
+
 namespace spv {
 // copied from chainparams.cpp
 static const std::vector<std::string> testSeeds = {
@@ -38,21 +40,28 @@ enum { DEFAULT_PORT = 18333 };
 
 class Client {
  public:
-  Client() : connection_nonce_(rand64()), loop_(uvw::Loop::getDefault()) {}
+  Client()
+      : max_connections(MAX_CONNECTIONS),
+        connection_nonce_(rand64()),
+        loop_(uvw::Loop::getDefault()) {}
   Client(const Client &other) = delete;
 
   // Send the version message to these seeds.
   void send_version_to_seeds(const std::vector<std::string> &seeds = testSeeds);
 
  private:
+  size_t max_connections;
   const uint64_t connection_nonce_;
   std::shared_ptr<uvw::Loop> loop_;
 
   // start a DNS lookup
-  void begin_dns_lookup(const std::string &name);
+  void begin_lookup(const std::string &name);
 
-  // connect to a DNS name
-  void maybe_connect(const addrinfo *info);
+  // enqueue connections
+  void finish_lookup(const addrinfo *info);
+
+  // begin a connection
+  void begin_connect(const addrinfo *info);
 
   // Send a version message.
   void send_version(const NetAddr &addr);
