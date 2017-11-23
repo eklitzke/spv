@@ -26,8 +26,7 @@ enum { PROTOCOL_VERSION = 70001 };
 
 void Client::send_version_to_seeds(const std::vector<std::string> &seeds) {
   for (const auto &seed : seeds) {
-    NetAddr addr = get_addr(seed);
-    send_version(addr);
+    begin_dns_lookup(seed);
   }
 }
 
@@ -46,33 +45,23 @@ void Client::send_version(const NetAddr &addr) {
   std::cout << string_to_hex(enc.serialize()) << "\n";
 }
 
-NetAddr Client::get_addr(const std::string &name, uint16_t port) {
-  NetAddr addr(port);
-
+void Client::begin_dns_lookup(const std::string &name) {
   auto request = loop_->resource<uvw::GetAddrInfoReq>();
   request->on<uvw::ErrorEvent>(
       [](const auto &, auto &) { std::cerr << "dns resolution failed\n"; });
-  request->on<uvw::AddrInfoEvent>([](const uvw::AddrInfoEvent &event, auto &y) {
-    std::cout << "got an addrinfo event " << event << " " << y << std::endl;
+  request->on<uvw::AddrInfoEvent>([&](uvw::AddrInfoEvent &event, auto &) {
+    maybe_connect(event.data.get());
   });
   request->nodeAddrInfo(name);
+}
 
-#if 0
-  addr.tcp = loop_->resource<uvw::TcpHandle>();
-
-  addr.tcp->on<uvw::ErrorEvent>(
-      [](const uvw::ErrorEvent &err, uvw::TcpHandle &) {
-        std::cerr << "got a uvw error: " << err.what() << "\n";
-      });
-
-  addr.tcp->once<uvw::ConnectEvent>(
-      [&](const uvw::ConnectEvent &, uvw::TcpHandle &tcp) {
-        std::cerr << "got a connection to " << name << "\n";
-        tcp.close();
-      });
-
-  addr.tcp->connect(name, port);
-#endif
-  return addr;
+void Client::maybe_connect(const addrinfo *info) {
+  for (const addrinfo *p = info; p != nullptr; p = p->ai_next) {
+    if (p->ai_family == AF_INET) {
+      std::cout << "have an ipv4 address: " << p << std::endl;
+    } else if (p->ai_family == AF_INET6) {
+      std::cout << "have an ipv6 address: " << p << std::endl;
+    }
+  }
 }
 }  // namespace spv

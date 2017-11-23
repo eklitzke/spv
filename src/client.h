@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -47,8 +48,11 @@ class Client {
   const uint64_t connection_nonce_;
   std::shared_ptr<uvw::Loop> loop_;
 
-  // Get a complete NetAddr from a DNS name
-  NetAddr get_addr(const std::string &name, uint16_t port = DEFAULT_PORT);
+  // start a DNS lookup
+  void begin_dns_lookup(const std::string &name);
+
+  // connect to a DNS name
+  void maybe_connect(const addrinfo *info);
 
   // Send a version message.
   void send_version(const NetAddr &addr);
