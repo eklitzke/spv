@@ -48,19 +48,31 @@ void Client::send_version(const NetAddr &addr) {
 
 NetAddr Client::get_addr(const std::string &name, uint16_t port) {
   NetAddr addr(port);
-  auto tcp = loop_->resource<uvw::TcpHandle>();
 
-  tcp->on<uvw::ErrorEvent>([](const uvw::ErrorEvent &err, uvw::TcpHandle &) {
-    std::cerr << "got a uvw error: " << err.what() << "\n";
+  auto request = loop_->resource<uvw::GetAddrInfoReq>();
+  request->on<uvw::ErrorEvent>(
+      [](const auto &, auto &) { std::cerr << "dns resolution failed\n"; });
+  request->on<uvw::AddrInfoEvent>([](const uvw::AddrInfoEvent &event, auto &y) {
+    std::cout << "got an addrinfo event " << event << " " << y << std::endl;
   });
+  request->nodeAddrInfo(name);
 
-  tcp->once<uvw::ConnectEvent>(
+#if 0
+  addr.tcp = loop_->resource<uvw::TcpHandle>();
+
+  addr.tcp->on<uvw::ErrorEvent>(
+      [](const uvw::ErrorEvent &err, uvw::TcpHandle &) {
+        std::cerr << "got a uvw error: " << err.what() << "\n";
+      });
+
+  addr.tcp->once<uvw::ConnectEvent>(
       [&](const uvw::ConnectEvent &, uvw::TcpHandle &tcp) {
         std::cerr << "got a connection to " << name << "\n";
         tcp.close();
       });
 
-  tcp->connect(name, port);
+  addr.tcp->connect(name, port);
+#endif
   return addr;
 }
 }  // namespace spv

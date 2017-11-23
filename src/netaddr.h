@@ -18,21 +18,15 @@
 
 #include <cstdint>
 #include <cstring>
+#include <memory>
+
+#include "../third_party/uvw/src/uvw.hpp"
 
 namespace spv {
 struct NetAddr {
   NetAddr() : NetAddr(0) {}
   explicit NetAddr(uint16_t port)
-      : time(0), services(0), port(port), sock(-1) {}
-  NetAddr(const NetAddr &other) = delete;
-  NetAddr(NetAddr &&other) noexcept
-      : time(other.time),
-        services(other.services),
-        port(other.port),
-        sock(other.sock) {
-    memmove(&addr, &other.addr, sizeof addr);
-    other.sock = -1;
-  }
+      : time(0), services(0), port(port), tcp(nullptr) {}
 
   // public fields
   uint32_t time;
@@ -41,7 +35,7 @@ struct NetAddr {
   uint16_t port;
 
   // private fields
-  int sock;
+  std::shared_ptr<uvw::TcpHandle> tcp;
 };
 
 }  // namespace spv
