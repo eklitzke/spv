@@ -24,17 +24,17 @@
 #include "./client.h"
 #include "./config.h"
 #include "./encoder.h"
+#include "./logging.h"
 #include "./util.h"
-
-#include "../third_party/uvw/src/uvw.hpp"
-
-using namespace spv;
+#include "./uvw.h"
 
 static const char usage_str[] = "Usage: spv [-h|--help] [-v|--version]\n";
 
 int main(int argc, char** argv) {
-  static const char short_opts[] = "hv";
-  static struct option long_opts[] = {{"help", no_argument, 0, 'h'},
+  DEFINE_LOGGER
+  static const char short_opts[] = "dhv";
+  static struct option long_opts[] = {{"debug", no_argument, 0, 'd'},
+                                      {"help", no_argument, 0, 'h'},
                                       {"version", no_argument, 0, 'v'},
                                       {0, 0, 0, 0}};
 
@@ -44,6 +44,9 @@ int main(int argc, char** argv) {
       break;
     }
     switch (c) {
+      case 'd':
+        spdlog::set_level(spdlog::level::debug);
+        break;
       case 'h':
         std::cout << SPV_VERSION_STR << "\n\n" << usage_str;
         return 0;
@@ -61,7 +64,8 @@ int main(int argc, char** argv) {
     }
   }
 
-  Client client;
+  log->info("main started, creating client");
+  spv::Client client;
   client.send_version_to_seeds();
   uvw::Loop::getDefault()->run();
   return 0;

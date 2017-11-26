@@ -16,17 +16,27 @@
 
 #include "./client.h"
 
+#include <sys/socket.h>
 #include <unistd.h>
 
-#include <iostream>
+#include "./logging.h"
+#include "./util.h"
 
 namespace spv {
 
+static const uvw::TimerHandle::Time NO_REPEAT(0);
+static const uvw::TimerHandle::Time CONNECT_TIMEOUT(1000);
+
+DEFINE_LOGGER
+
 enum { PROTOCOL_VERSION = 70001 };
+
+// testnet port
+enum { DEFAULT_PORT = 18332 };
 
 void Client::send_version_to_seeds(const std::vector<std::string> &seeds) {
   for (const auto &seed : seeds) {
-    begin_lookup(seed);
+    lookup_seed(seed);
   }
 }
 
@@ -42,26 +52,79 @@ void Client::send_version(const NetAddr &addr) {
   enc.push_int<uint32_t>(1);                  // start height
   enc.push_bool(false);                       // relay
 
-  std::cout << string_to_hex(enc.serialize()) << "\n";
+  log->info("version message is: {}", string_to_hex(enc.serialize()));
 }
 
-void Client::begin_lookup(const std::string &name) {
+void Client::lookup_seed(const std::string &seed) {
   auto request = loop_->resource<uvw::GetAddrInfoReq>();
   request->on<uvw::ErrorEvent>(
-      [](const auto &, auto &) { std::cerr << "dns resolution failed\n"; });
+      [](const auto &, auto &) { log->error("dns resolution failed"); });
   request->on<uvw::AddrInfoEvent>([&](uvw::AddrInfoEvent &event, auto &) {
-    finish_lookup(event.data.get());
+    for (const addrinfo *p = event.data.get(); p != nullptr; p = p->ai_next) {
+      uvw::Addr addr;
+      char buf[INET6_ADDRSTRLEN];
+      addr.ip = inet_ntop(p->ai_family, &p->ai_addr, buf, sizeof buf);
+      addr.port = DEFAULT_PORT;
+      log->debug("adding peer {} via seed {}", addr, seed);
+      known_peers_.insert(addr);
+    }
+    connect_to_peers();
   });
-  request->nodeAddrInfo(name);
+  request->nodeAddrInfo(seed);
 }
 
-void Client::finish_lookup(const addrinfo *info) {
-  for (const addrinfo *p = info; p != nullptr; p = p->ai_next) {
-    if (p->ai_family == AF_INET) {
-      std::cout << "have an ipv4 address: " << p << std::endl;
-    } else if (p->ai_family == AF_INET6) {
-      std::cout << "have an ipv6 address: " << p << std::endl;
+void Client::connect_to_peers() {
+  if (connections_.size() >= max_connections_) {
+    return;
+  }
+
+  std::vector<uvw::Addr> addrs(known_peers_.cbegin(), known_peers_.cend());
+  shuffle(addrs);
+  while (connections_.size() < max_connections_ && !addrs.empty()) {
+    auto peer = addrs.begin();
+    connect_to_peer(*peer);
+    addrs.erase(peer);
+  }
+}
+
+void Client::connect_to_peer(const uvw::Addr &addr) {
+  known_peers_.erase(addr);
+  auto conn = std::make_shared<Connection>(addr);
+  conn->tcp->on<uvw::ErrorEvent>(
+      [=](const uvw::ErrorEvent &, uvw::TcpHandle &) {
+        log->error("got a tcp error from {}", conn->addr);
+        remove_connection(conn.get());
+        connect_to_peers();
+        conn->reset();
+      });
+  conn->tcp->once<uvw::ConnectEvent>([=](const auto &, auto &) {
+    log->info("!!!! connected to {}", conn->addr);
+    remove_connection(conn.get());
+    conn->reset();
+  });
+  conn->timer->on<uvw::TimerEvent>([=](const auto &, auto &) {
+    log->warn("connection to {} timed out", conn->addr);
+    remove_connection(conn.get());
+    connect_to_peers();
+  });
+
+  log->info("connecting to {}", conn->addr);
+  conn->tcp->connect(addr);
+  conn->timer->start(CONNECT_TIMEOUT, NO_REPEAT);
+  connections_.push_back(conn);
+}
+
+void Client::remove_connection(const Connection *conn) {
+  bool removed = false;
+  for (auto it = connections_.begin(); it != connections_.end(); it++) {
+    if ((*it)->addr == conn->addr) {
+      connections_.erase(it);
+      removed = true;
+      break;
     }
+  }
+  if (!removed) {
+    log->error("failed to remove connection {}", conn->addr);
   }
 }
 }  // namespace spv

@@ -37,6 +37,7 @@ Build dependencies:
 
 Other dependencies/third party libs; these are all included as git submodules:
 
+ * [gabime/spdlog](https://github.com/gabime/spdlog)
  * [okdshin/PicoSHA2](https://github.com/okdshin/PicoSHA2)
  * [skypjack/uvw](https://github.com/skypjack/uvw)
 

@@ -21,12 +21,13 @@
 
 namespace {
 std::random_device rd;
-std::mt19937_64 gen(rd());
 std::uniform_int_distribution<uint64_t> dist(
     0, std::numeric_limits<uint64_t>::max());
 }
 
 namespace spv {
+std::mt19937_64 g(rd());
+
 // copied from stack overflow
 std::string string_to_hex(const std::string& input) {
   static const char* const lut = "0123456789abcdef";
@@ -42,5 +43,5 @@ std::string string_to_hex(const std::string& input) {
   return output;
 }
 
-uint64_t rand64() { return dist(gen); }
+uint64_t rand64() { return dist(g); }
 }

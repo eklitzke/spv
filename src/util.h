@@ -16,13 +16,22 @@
 
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
+#include <random>
 #include <string>
 
 namespace spv {
+extern std::mt19937_64 g;
+
 // convert a raw byte string to hex
 std::string string_to_hex(const std::string& input);
 
 // generate a random uint64_t value
 uint64_t rand64();
+
+template <typename T>
+void shuffle(T& iterable) {
+  std::shuffle(iterable.begin(), iterable.end(), g);
+}
 }  // namespace spv

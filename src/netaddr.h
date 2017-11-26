@@ -20,7 +20,7 @@
 #include <cstring>
 #include <memory>
 
-#include "../third_party/uvw/src/uvw.hpp"
+#include "./uvw.h"
 
 namespace spv {
 struct NetAddr {
