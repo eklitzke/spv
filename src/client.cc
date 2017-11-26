@@ -27,7 +27,6 @@
 
 namespace spv {
 DEFINE_LOGGER
-#define ENABLE_VALGRIND 1
 
 static const std::chrono::seconds NO_REPEAT{0};
 
@@ -47,8 +46,7 @@ void Client::run() {
     lookup_seed(seed);
   }
 #ifdef ENABLE_VALGRIND
-  auto loop = uvw::Loop::getDefault();
-  auto timer = loop->resource<uvw::TimerHandle>();
+  auto timer = loop_.resource<uvw::TimerHandle>();
   timer->on<uvw::TimerEvent>([this](const auto &, auto &timer) {
     log->warn("initiating shutdown");
     timer.close();
@@ -67,7 +65,7 @@ void Client::shutdown() {
     conn->close();
   }
   connections_.clear();
-  uvw::Loop::getDefault()->stop();
+  loop_.stop();
 }
 
 void Client::send_version(const NetAddr &addr) {
@@ -86,8 +84,7 @@ void Client::send_version(const NetAddr &addr) {
 }
 
 void Client::lookup_seed(const std::string &seed) {
-  auto loop = uvw::Loop::getDefault();
-  auto request = loop->resource<uvw::GetAddrInfoReq>();
+  auto request = loop_.resource<uvw::GetAddrInfoReq>();
   request->on<uvw::ErrorEvent>(
       [](const auto &, auto &) { log->error("dns resolution failed"); });
   request->on<uvw::AddrInfoEvent>([this, seed](const auto &event, auto &) {
@@ -156,9 +153,7 @@ void Client::connect_to_peers() {
 void Client::connect_to_peer(const uvw::Addr &addr) {
   log->debug("connecting to {}", addr);
 
-  auto loop = uvw::Loop::getDefault();
-
-  auto conn = loop->resource<uvw::TcpHandle>();
+  auto conn = loop_.resource<uvw::TcpHandle>();
   conn->data(std::make_shared<uvw::Addr>(addr));
   auto weak_conn = conn->weak_from_this();
   auto cancel_conn = [=]() {
@@ -167,7 +162,7 @@ void Client::connect_to_peer(const uvw::Addr &addr) {
     }
   };
 
-  auto timer = loop->resource<uvw::TimerHandle>();
+  auto timer = loop_.resource<uvw::TimerHandle>();
   auto weak_timer = timer->weak_from_this();
   auto cancel_timer = [=]() {
     if (auto t = weak_timer.lock()) t->close();
@@ -186,7 +181,12 @@ void Client::connect_to_peer(const uvw::Addr &addr) {
   });
   conn->once<uvw::ConnectEvent>([=](const auto &, auto &) {
     log->info("connected to new peer {}", addr);
+    conn->read();
     cancel_timer();
+  });
+  conn->once<uvw::EndEvent>([=](const auto &, auto &) {
+    log->info("remote peer {} closed connection", addr);
+    cancel_conn();
   });
   conn->connect(addr);
   connections_.push_back(conn);

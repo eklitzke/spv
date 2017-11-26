@@ -30,8 +30,10 @@
 namespace spv {
 class Client {
  public:
-  explicit Client(size_t max_connections)
-      : max_connections_(max_connections), connection_nonce_(rand64()) {}
+  Client(uvw::Loop &loop, size_t max_connections)
+      : max_connections_(max_connections),
+        connection_nonce_(rand64()),
+        loop_(loop) {}
 
   Client() = delete;
   Client(const Client &other) = delete;
@@ -42,6 +44,7 @@ class Client {
  private:
   const size_t max_connections_;
   const uint64_t connection_nonce_;
+  uvw::Loop &loop_;
   std::unordered_set<uvw::Addr> known_peers_;
   std::vector<std::shared_ptr<uvw::TcpHandle>> connections_;
 

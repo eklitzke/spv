@@ -71,10 +71,10 @@ int main(int argc, char** argv) {
   }
 
   logger->info("main started, creating client");
-  spv::Client client(max_connections);
+  auto loop = uvw::Loop::getDefault();
+  spv::Client client(*loop, max_connections);
   client.run();
 
-  auto loop = uvw::Loop::getDefault();
   loop->run();
   loop->close();
   return 0;
