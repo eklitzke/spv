@@ -157,18 +157,13 @@ void Client::connect_to_peer(const uvw::Addr &addr) {
   auto loop = uvw::Loop::getDefault();
   auto conn = loop->resource<uvw::TcpHandle>();
   auto timer = loop->resource<uvw::TimerHandle>();
-
-  std::weak_ptr<uvw::TimerHandle> weak_timer = timer;
-  auto cancel_timer = [=]() {
-    if (auto t = weak_timer.lock()) t->close();
-  };
+  auto cancel_timer = [t = timer->shared_from_this()] { t->close(); };
 
   conn->once<uvw::ErrorEvent>([=](const auto &, auto &conn) {
     log->debug("error from {}", addr);
     if (!conn.closing()) {
       remove_connection(&conn);
     }
-    cancel_timer();
     connect_to_peers();
   });
   conn->on<uvw::DataEvent>(
@@ -184,13 +179,22 @@ void Client::connect_to_peer(const uvw::Addr &addr) {
   conn->connect(addr);
   connections_.push_back(conn);
 
-  timer->on<uvw::TimerEvent>(
-      [ this, addr, c = conn->shared_from_this() ](const auto &, auto &timer) {
-        // the connection will actually be closed in the conn's error event
-        log->warn("connection to {} timed out", addr);
-        c->close();
-        timer.close();
-      });
+#if 1
+  std::weak_ptr<uvw::TcpHandle> weak_conn = conn;
+  auto close_conn = [=]() {
+    if (auto c = weak_conn.lock()) c->close();
+  };
+#else
+  // leaks memory
+  auto close_conn = [c = conn->shared_from_this()]() { c->close(); };
+#endif
+
+  timer->on<uvw::TimerEvent>([=](const auto &, auto &timer) {
+    // the connection will actually be closed in the conn's error event
+    log->warn("connection to {} timed out", addr);
+    close_conn();
+    timer.close();
+  });
   timer->start(std::chrono::seconds(1), NO_REPEAT);
 }
 
