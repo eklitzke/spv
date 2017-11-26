@@ -59,14 +59,42 @@ void Client::lookup_seed(const std::string &seed) {
   auto request = loop_->resource<uvw::GetAddrInfoReq>();
   request->on<uvw::ErrorEvent>(
       [](const auto &, auto &) { log->error("dns resolution failed"); });
-  request->on<uvw::AddrInfoEvent>([&](uvw::AddrInfoEvent &event, auto &) {
+  request->on<uvw::AddrInfoEvent>([=](uvw::AddrInfoEvent &event, auto &) {
+    char buf[INET6_ADDRSTRLEN];
+    memset(buf, 0, sizeof buf);
+
+    sockaddr_in *sa4;
+    sockaddr_in6 *sa6;
+    uvw::Addr addr;
+    addr.port = DEFAULT_PORT;
+
     for (const addrinfo *p = event.data.get(); p != nullptr; p = p->ai_next) {
-      uvw::Addr addr;
-      char buf[INET6_ADDRSTRLEN];
-      addr.ip = inet_ntop(p->ai_family, &p->ai_addr, buf, sizeof buf);
-      addr.port = DEFAULT_PORT;
-      log->debug("adding peer {} via seed {}", addr, seed);
-      known_peers_.insert(addr);
+      switch (p->ai_addr->sa_family) {
+        case AF_INET:
+          sa4 = reinterpret_cast<sockaddr_in *>(p->ai_addr);
+          if (inet_ntop(sa4->sin_family, &sa4->sin_addr, buf, sizeof buf) ==
+              nullptr) {
+            log->error("inet_ntop failed: {}", strerror(errno));
+            continue;
+          }
+          break;
+        case AF_INET6:
+          sa6 = reinterpret_cast<sockaddr_in6 *>(p->ai_addr);
+          if (inet_ntop(sa6->sin6_family, &sa6->sin6_addr, buf, sizeof buf) ==
+              nullptr) {
+            log->error("inet_ntop failed: {}", strerror(errno));
+            continue;
+          }
+          break;
+        default:
+          log->warn("unknown address family {}", p->ai_addr->sa_family);
+          break;
+      }
+      addr.ip = buf;
+      auto x = known_peers_.insert(addr);
+      if (x.second) {
+        log->debug("added peer {} (from seed {})", addr, seed);
+      }
     }
     connect_to_peers();
   });
@@ -84,11 +112,13 @@ void Client::connect_to_peers() {
     auto peer = addrs.begin();
     connect_to_peer(*peer);
     addrs.erase(peer);
+    if (known_peers_.erase(*peer) != 1) {
+      log->error("failed to erase known peer {}", *peer);
+    }
   }
 }
 
 void Client::connect_to_peer(const uvw::Addr &addr) {
-  known_peers_.erase(addr);
   auto conn = std::make_shared<Connection>(addr);
   conn->tcp->on<uvw::ErrorEvent>(
       [=](const uvw::ErrorEvent &, uvw::TcpHandle &) {
