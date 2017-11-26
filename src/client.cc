@@ -169,12 +169,10 @@ void Client::connect_to_peer(const uvw::Addr &addr) {
   auto conn = loop->resource<uvw::TcpHandle>();
   auto timer = loop->resource<uvw::TimerHandle>();
 
-  std::weak_ptr<uvw::TcpHandle> weak_conn = conn;
   std::weak_ptr<uvw::TimerHandle> weak_timer = timer;
-
   conn->once<uvw::ErrorEvent>(
       [this, addr, weak_timer](const auto &, auto &conn) {
-        log->info("tcp error from {}", addr);
+        log->debug("tcp error from {}", addr);
         if (!conn.closing()) {
           remove_connection(&conn);
         }
@@ -194,12 +192,10 @@ void Client::connect_to_peer(const uvw::Addr &addr) {
   connections_.push_back(conn);
 
   timer->on<uvw::TimerEvent>(
-      [this, addr, weak_conn](const auto &, auto &timer) {
+      [ this, addr, c = conn->shared_from_this() ](const auto &, auto &timer) {
         // the connection will actually be closed in the conn's error event
         log->warn("connection to {} timed out", addr);
-        if (auto w = weak_conn.lock()) {
-          w->close();
-        }
+        c->close();
         timer.close();
       });
   timer->start(CONNECT_TIMEOUT, NO_REPEAT);
