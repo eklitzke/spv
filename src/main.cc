@@ -76,5 +76,6 @@ int main(int argc, char** argv) {
 
   auto loop = uvw::Loop::getDefault();
   loop->run();
+  loop->close();
   return 0;
 }

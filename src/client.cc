@@ -27,6 +27,7 @@
 
 namespace spv {
 DEFINE_LOGGER
+#define ENABLE_VALGRIND 1
 
 static const std::chrono::seconds NO_REPEAT{0};
 
@@ -45,7 +46,7 @@ void Client::run() {
   for (const auto &seed : testSeeds) {
     lookup_seed(seed);
   }
-
+#ifdef ENABLE_VALGRIND
   auto loop = uvw::Loop::getDefault();
   auto timer = loop->resource<uvw::TimerHandle>();
   timer->on<uvw::TimerEvent>([this](const auto &, auto &timer) {
@@ -54,6 +55,7 @@ void Client::run() {
     shutdown();
   });
   timer->start(std::chrono::seconds(10), NO_REPEAT);
+#endif
 }
 
 // for debugging only
@@ -61,7 +63,7 @@ void Client::shutdown() {
   log->warn("shutting down");
   for (auto &conn : connections_) {
     auto addr = conn->data<uvw::Addr>();
-    log->debug("forcibly shutting down connection to {}", addr);
+    log->debug("forcibly shutting down connection to {}", *addr);
     conn->close();
   }
   connections_.clear();
@@ -155,16 +157,26 @@ void Client::connect_to_peer(const uvw::Addr &addr) {
   log->debug("connecting to {}", addr);
 
   auto loop = uvw::Loop::getDefault();
+
   auto conn = loop->resource<uvw::TcpHandle>();
+  conn->data(std::make_shared<uvw::Addr>(addr));
+  auto weak_conn = conn->weak_from_this();
+  auto cancel_conn = [=]() {
+    if (auto c = weak_conn.lock()) {
+      if (!c->closing()) remove_connection(c.get());
+    }
+  };
+
   auto timer = loop->resource<uvw::TimerHandle>();
-  auto cancel_timer = [t = timer->shared_from_this()] { t->close(); };
+  auto weak_timer = timer->weak_from_this();
+  auto cancel_timer = [=]() {
+    if (auto t = weak_timer.lock()) t->close();
+  };
 
   conn->once<uvw::ErrorEvent>([=](const auto &, auto &conn) {
     log->debug("error from {}", addr);
-    if (!conn.closing()) {
-      remove_connection(&conn);
-    }
-    connect_to_peers();
+    cancel_timer();
+    cancel_conn();
   });
   conn->on<uvw::DataEvent>(
       [](const auto &, auto &) { log->info("got a data read event"); });
@@ -179,20 +191,12 @@ void Client::connect_to_peer(const uvw::Addr &addr) {
   conn->connect(addr);
   connections_.push_back(conn);
 
-#if 1
-  std::weak_ptr<uvw::TcpHandle> weak_conn = conn;
-  auto close_conn = [=]() {
-    if (auto c = weak_conn.lock()) c->close();
-  };
-#else
-  // leaks memory
-  auto close_conn = [c = conn->shared_from_this()]() { c->close(); };
-#endif
-
+  timer->once<uvw::ErrorEvent>(
+      [=](const auto &, auto &timer) { timer.close(); });
   timer->on<uvw::TimerEvent>([=](const auto &, auto &timer) {
     // the connection will actually be closed in the conn's error event
     log->warn("connection to {} timed out", addr);
-    close_conn();
+    cancel_conn();
     timer.close();
   });
   timer->start(std::chrono::seconds(1), NO_REPEAT);
