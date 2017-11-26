@@ -59,5 +59,8 @@ class Client {
 
   // Send a version message.
   void send_version(const NetAddr &addr);
+
+  // for valgrind
+  void shutdown();
 };
 }  // namespace spv

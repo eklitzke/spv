@@ -43,6 +43,26 @@ void Client::run() {
   for (const auto &seed : testSeeds) {
     lookup_seed(seed);
   }
+
+  auto loop = uvw::Loop::getDefault();
+  auto timer = loop->resource<uvw::TimerHandle>();
+  timer->on<uvw::TimerEvent>([=](const auto &, auto &) {
+    log->warn("initiating shutdown");
+    shutdown();
+  });
+  static uvw::TimerHandle::Time shutdown_time(10000);
+  timer->start(shutdown_time, NO_REPEAT);
+}
+
+// for debugging only
+void Client::shutdown() {
+  while (!connections_.empty()) {
+    log->warn("shutting down");
+    auto it = connections_.begin();
+    (*it)->close();
+    connections_.erase(it);
+  }
+  uvw::Loop::getDefault()->stop();
 }
 
 void Client::send_version(const NetAddr &addr) {
@@ -112,15 +132,15 @@ void Client::connect_to_peers() {
     return;
   }
 
-  std::vector<uvw::Addr> addrs(known_peers_.cbegin(), known_peers_.cend());
-  shuffle(addrs);
-  while (connections_.size() < max_connections_ && !addrs.empty()) {
-    auto peer = addrs.begin();
-    connect_to_peer(*peer);
-    addrs.erase(peer);
-    if (known_peers_.erase(*peer) != 1) {
-      log->error("failed to erase known peer {}", *peer);
+  std::vector<uvw::Addr> peers(known_peers_.cbegin(), known_peers_.cend());
+  shuffle(peers);
+  while (connections_.size() < max_connections_ && !peers.empty()) {
+    auto it = peers.begin();
+    connect_to_peer(*it);
+    if (known_peers_.erase(*it) != 1) {
+      log->error("failed to erase known peer {}", *it);
     }
+    peers.erase(it);
   }
 }
 
@@ -132,15 +152,14 @@ void Client::connect_to_peer(const uvw::Addr &addr) {
   auto timer = loop->resource<uvw::TimerHandle>();
 
   conn->on<uvw::ErrorEvent>([=](const uvw::ErrorEvent &, uvw::TcpHandle &) {
-    log->error("got a tcp error from {}", addr);
+    log->warn("tcp error from {}", addr);
     remove_connection(conn.get());
-    connect_to_peers();
-    conn->close();
     timer->stop();
+    conn->close();
+    connect_to_peers();
   });
   conn->once<uvw::ConnectEvent>([=](const auto &, auto &) {
-    log->info("!!!! connected to {}", addr);
-    remove_connection(conn.get());
+    log->info("SUCCESSFULLY connected to {}", addr);
     timer->stop();
   });
   conn->connect(addr);
