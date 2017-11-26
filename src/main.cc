@@ -33,11 +33,14 @@ static const char usage_str[] = "Usage: spv [-h|--help] [-v|--version]\n";
 int main(int argc, char** argv) {
   DEFINE_LOGGER
   static const char short_opts[] = "dhv";
-  static struct option long_opts[] = {{"debug", no_argument, 0, 'd'},
-                                      {"help", no_argument, 0, 'h'},
-                                      {"version", no_argument, 0, 'v'},
-                                      {0, 0, 0, 0}};
+  static struct option long_opts[] = {
+      {"debug", no_argument, 0, 'd'},
+      {"help", no_argument, 0, 'h'},
+      {"max-connections", required_argument, 0, 'c'},
+      {"version", no_argument, 0, 'v'},
+      {0, 0, 0, 0}};
 
+  size_t max_connections = 2;
   for (;;) {
     int c = getopt_long(argc, argv, short_opts, long_opts, nullptr);
     if (c == -1) {
@@ -65,8 +68,8 @@ int main(int argc, char** argv) {
   }
 
   log->info("main started, creating client");
-  spv::Client client;
-  client.send_version_to_seeds();
+  spv::Client client(max_connections);
+  client.run();
   uvw::Loop::getDefault()->run();
   return 0;
 }

@@ -23,19 +23,24 @@
 #include "./util.h"
 
 namespace spv {
+DEFINE_LOGGER
 
 static const uvw::TimerHandle::Time NO_REPEAT(0);
 static const uvw::TimerHandle::Time CONNECT_TIMEOUT(1000);
 
-DEFINE_LOGGER
+// copied from chainparams.cpp
+static const std::vector<std::string> testSeeds = {
+    "testnet-seed.bitcoin.jonasschnelli.ch", "seed.tbtc.petertodd.org",
+    "testnet-seed.bluematt.me",
+};
 
 enum { PROTOCOL_VERSION = 70001 };
 
 // testnet port
 enum { DEFAULT_PORT = 18332 };
 
-void Client::send_version_to_seeds(const std::vector<std::string> &seeds) {
-  for (const auto &seed : seeds) {
+void Client::run() {
+  for (const auto &seed : testSeeds) {
     lookup_seed(seed);
   }
 }
@@ -56,7 +61,8 @@ void Client::send_version(const NetAddr &addr) {
 }
 
 void Client::lookup_seed(const std::string &seed) {
-  auto request = loop_->resource<uvw::GetAddrInfoReq>();
+  auto loop = uvw::Loop::getDefault();
+  auto request = loop->resource<uvw::GetAddrInfoReq>();
   request->on<uvw::ErrorEvent>(
       [](const auto &, auto &) { log->error("dns resolution failed"); });
   request->on<uvw::AddrInfoEvent>([=](uvw::AddrInfoEvent &event, auto &) {
@@ -119,42 +125,46 @@ void Client::connect_to_peers() {
 }
 
 void Client::connect_to_peer(const uvw::Addr &addr) {
-  auto conn = std::make_shared<Connection>(addr);
-  conn->tcp->on<uvw::ErrorEvent>(
-      [=](const uvw::ErrorEvent &, uvw::TcpHandle &) {
-        log->error("got a tcp error from {}", conn->addr);
-        remove_connection(conn.get());
-        connect_to_peers();
-        conn->reset();
-      });
-  conn->tcp->once<uvw::ConnectEvent>([=](const auto &, auto &) {
-    log->info("!!!! connected to {}", conn->addr);
+  log->info("connecting to {}", addr);
+
+  auto loop = uvw::Loop::getDefault();
+  auto conn = loop->resource<uvw::TcpHandle>();
+  auto timer = loop->resource<uvw::TimerHandle>();
+
+  conn->on<uvw::ErrorEvent>([=](const uvw::ErrorEvent &, uvw::TcpHandle &) {
+    log->error("got a tcp error from {}", addr);
     remove_connection(conn.get());
-    conn->reset();
+    connect_to_peers();
+    conn->close();
+    timer->stop();
   });
-  conn->timer->on<uvw::TimerEvent>([=](const auto &, auto &) {
-    log->warn("connection to {} timed out", conn->addr);
+  conn->once<uvw::ConnectEvent>([=](const auto &, auto &) {
+    log->info("!!!! connected to {}", addr);
+    remove_connection(conn.get());
+    timer->stop();
+  });
+  conn->connect(addr);
+  connections_.push_back(conn);
+
+  timer->on<uvw::TimerEvent>([=](const auto &, auto &) {
+    log->warn("connection to {} timed out", addr);
     remove_connection(conn.get());
     connect_to_peers();
   });
-
-  log->info("connecting to {}", conn->addr);
-  conn->tcp->connect(addr);
-  conn->timer->start(CONNECT_TIMEOUT, NO_REPEAT);
-  connections_.push_back(conn);
+  timer->start(CONNECT_TIMEOUT, NO_REPEAT);
 }
 
-void Client::remove_connection(const Connection *conn) {
+void Client::remove_connection(const uvw::TcpHandle *conn) {
   bool removed = false;
   for (auto it = connections_.begin(); it != connections_.end(); it++) {
-    if ((*it)->addr == conn->addr) {
+    if (it->get() == conn) {
       connections_.erase(it);
       removed = true;
       break;
     }
   }
   if (!removed) {
-    log->error("failed to remove connection {}", conn->addr);
+    log->error("failed to remove connection {}", conn->peer());
   }
 }
 }  // namespace spv
