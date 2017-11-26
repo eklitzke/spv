@@ -25,20 +25,10 @@
 #include "./logging.h"
 #include "./util.h"
 
-void log_handle(uvw::BaseHandle &handle) {
-  std::cerr << "leaked a handle: " << &handle << "\n";
-}
-
-void walk_handles() {
-  auto loop = uvw::Loop::getDefault();
-  loop->walk(log_handle);
-}
-
 namespace spv {
 DEFINE_LOGGER
 
 static const std::chrono::seconds NO_REPEAT{0};
-static const std::chrono::seconds CONNECT_TIMEOUT{1};
 
 // copied from chainparams.cpp
 static const std::vector<std::string> testSeeds = {
@@ -62,7 +52,6 @@ void Client::run() {
     log->warn("initiating shutdown");
     timer.close();
     shutdown();
-    walk_handles();
   });
   timer->start(std::chrono::seconds(10), NO_REPEAT);
 }
@@ -70,12 +59,12 @@ void Client::run() {
 // for debugging only
 void Client::shutdown() {
   log->warn("shutting down");
-
   for (auto &conn : connections_) {
+    auto addr = conn->data<uvw::Addr>();
+    log->debug("forcibly shutting down connection to {}", addr);
     conn->close();
   }
   connections_.clear();
-
   uvw::Loop::getDefault()->stop();
 }
 
@@ -170,24 +159,28 @@ void Client::connect_to_peer(const uvw::Addr &addr) {
   auto timer = loop->resource<uvw::TimerHandle>();
 
   std::weak_ptr<uvw::TimerHandle> weak_timer = timer;
-  conn->once<uvw::ErrorEvent>(
-      [this, addr, weak_timer](const auto &, auto &conn) {
-        log->debug("tcp error from {}", addr);
-        if (!conn.closing()) {
-          remove_connection(&conn);
-        }
-        if (auto t = weak_timer.lock()) {
-          t->close();
-        }
-        connect_to_peers();
-      });
+  auto cancel_timer = [=]() {
+    if (auto t = weak_timer.lock()) t->close();
+  };
+
+  conn->once<uvw::ErrorEvent>([=](const auto &, auto &conn) {
+    log->debug("error from {}", addr);
+    if (!conn.closing()) {
+      remove_connection(&conn);
+    }
+    cancel_timer();
+    connect_to_peers();
+  });
   conn->on<uvw::DataEvent>(
       [](const auto &, auto &) { log->info("got a data read event"); });
-  conn->once<uvw::ConnectEvent>(
-      [ addr, t = timer.get() ](const auto &, auto &) {
-        log->info("connected to new peer {}", addr);
-        t->close();
-      });
+  conn->once<uvw::CloseEvent>([=](const auto &, auto &) {
+    log->debug("closing connection {}", addr);
+    cancel_timer();
+  });
+  conn->once<uvw::ConnectEvent>([=](const auto &, auto &) {
+    log->info("connected to new peer {}", addr);
+    cancel_timer();
+  });
   conn->connect(addr);
   connections_.push_back(conn);
 
@@ -198,7 +191,7 @@ void Client::connect_to_peer(const uvw::Addr &addr) {
         c->close();
         timer.close();
       });
-  timer->start(CONNECT_TIMEOUT, NO_REPEAT);
+  timer->start(std::chrono::seconds(1), NO_REPEAT);
 }
 
 void Client::remove_connection(uvw::TcpHandle *conn, bool reconnect) {
