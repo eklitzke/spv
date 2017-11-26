@@ -55,7 +55,7 @@ class Client {
   void connect_to_peer(const uvw::Addr &addr);
 
   // enqueue connections
-  void remove_connection(const uvw::TcpHandle *conn);
+  void remove_connection(uvw::TcpHandle *conn, bool reconnect = true);
 
   // Send a version message.
   void send_version(const NetAddr &addr);

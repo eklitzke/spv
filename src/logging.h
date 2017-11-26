@@ -23,4 +23,6 @@
 #include "spdlog/fmt/ostr.h"
 #include "spdlog/spdlog.h"
 
-#define DEFINE_LOGGER static auto log = spdlog::stdout_color_mt(__FILE__);
+#define DECLARE_LOGGER(name) auto name = spdlog::stdout_color_mt(__FILE__);
+
+#define DEFINE_LOGGER auto log = spdlog::stdout_color_mt(__FILE__);

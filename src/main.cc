@@ -31,8 +31,8 @@
 static const char usage_str[] = "Usage: spv [-h|--help] [-v|--version]\n";
 
 int main(int argc, char** argv) {
-  DEFINE_LOGGER
-  static const char short_opts[] = "dhv";
+  DECLARE_LOGGER(logger)
+  static const char short_opts[] = "c:dhv";
   static struct option long_opts[] = {
       {"debug", no_argument, 0, 'd'},
       {"help", no_argument, 0, 'h'},
@@ -47,6 +47,9 @@ int main(int argc, char** argv) {
       break;
     }
     switch (c) {
+      case 'c':
+        max_connections = std::strtoul(optarg, nullptr, 10);
+        break;
       case 'd':
         spdlog::set_level(spdlog::level::debug);
         break;
@@ -67,9 +70,11 @@ int main(int argc, char** argv) {
     }
   }
 
-  log->info("main started, creating client");
+  logger->info("main started, creating client");
   spv::Client client(max_connections);
   client.run();
-  uvw::Loop::getDefault()->run();
+
+  auto loop = uvw::Loop::getDefault();
+  loop->run();
   return 0;
 }
