@@ -22,13 +22,6 @@
 #include <memory>
 #include <vector>
 
-#include "PicoSHA2/picosha2.h"
-
-#define MSG_HEADER_SIZE 24
-#define COMMAND_OFFSET 4
-#define PAYLOAD_OFFSET 16
-#define CHECKSUM_OFFSET 20
-
 namespace spv {
 // Buffer represents a byte buffer.
 class Buffer {
@@ -37,37 +30,34 @@ class Buffer {
   explicit Buffer(size_t cap)
       : capacity_(cap), size_(0), data_(new char[cap]) {}
 
-  // allocate message headers, reserving the required space
-  void allocate_headers(const std::string &cmd) {
-    assert(size_ == 0);
-    assert(cmd.size() <= 12);
-    ensure_capacity(MSG_HEADER_SIZE);
-
-    static const uint32_t testnet_magic = 0x0b110907;
-    copy(&testnet_magic, sizeof testnet_magic);
-
-    memmove(data_.get() + COMMAND_OFFSET, cmd.c_str(), cmd.size());
-
-    size_ = 24;
-  }
-
-  void finish_headers() {
-    // insert the length
-    uint32_t len = htole32(size_ - MSG_HEADER_SIZE);
-    memmove(data_.get() + PAYLOAD_OFFSET, &len, sizeof len);
-
-    // insert the checksum
-    std::vector<unsigned char> hash1(32), hash2(32);
-    picosha2::hash256(data_.get() + MSG_HEADER_SIZE, data_.get() + size_,
-                      hash1);
-    picosha2::hash256(hash1, hash2);
-    memmove(data_.get() + CHECKSUM_OFFSET, hash2.data(), 4);
-  }
-
-  void copy(const void *addr, size_t len) {
+  // append data
+  void append(const void *addr, size_t len) {
     ensure_capacity(len);
     memmove(data_.get() + static_cast<ptrdiff_t>(size_), addr, len);
     size_ += len;
+  }
+
+  // append string data
+  void append_string(const std::string &str, size_t width = 0) {
+    append(str.data(), str.size());
+    if (width) {
+      ssize_t zero_padding = width - str.size();
+      assert(zero_padding >= 0);
+      if (zero_padding) append_zeros(zero_padding);
+    }
+  }
+
+  // append zeros
+  void append_zeros(size_t len) {
+    ensure_capacity(len);
+    memset(data_.get() + static_cast<ptrdiff_t>(size_), 0, len);
+    size_ += len;
+  }
+
+  // insert directly into the middle of the buffer
+  void insert(const void *addr, size_t len, size_t offset) {
+    assert(offset + len <= size_);
+    memmove(data_.get() + offset, addr, len);
   }
 
   inline size_t size() const { return size_; }

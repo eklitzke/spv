@@ -24,30 +24,34 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
-
 #include <string>
 
 #include "./addr.h"
 #include "./buffer.h"
 
 namespace spv {
+
+enum {
+  COMMAND_SIZE = 12,
+  HEADER_PADDING = 8,
+  HEADER_SIZE = 24,
+  HEADER_LEN_OFFSET = 16,
+  HEADER_CHECKSUM_OFFSET = 20,
+};
+
+inline const uint32_t MAINNET_MAGIC = 0xD9B4BEF9;
+inline const uint32_t TESTNET_MAGIC = 0xDAB5BFFA;
+inline const uint32_t TESTNET3_MAGIC = 0x0709110B;
+
 // Encoder can encode data.
 class Encoder {
  public:
-  explicit Encoder(const std::string &command) {
-    if (!command.empty()) {
-      buf_.allocate_headers(command);
-    }
-  }
-
-  std::unique_ptr<char[]> move_buffer(size_t *sz, bool finish = true) {
-    if (finish) buf_.finish_headers();
-    return buf_.move_buffer(sz);
-  }
+  Encoder() {}
+  explicit Encoder(const std::string &command) { set_command(command); }
 
   template <typename T>
   void push_int(T val) {
-    buf_.copy(&val, sizeof val);
+    buf_.append(&val, sizeof val);
   }
 
   inline void push_byte(uint8_t val) { return push_int<uint8_t>(val); }
@@ -62,7 +66,7 @@ class Encoder {
 
   inline void push_string(const std::string &s) {
     push_varint(s.size());
-    buf_.copy(s.c_str(), s.size());
+    buf_.append(s.c_str(), s.size());
   }
 
   void push_varint(size_t val);
@@ -71,8 +75,17 @@ class Encoder {
   void push_netaddr(const Addr *addr, uint64_t services = 0,
                     bool include_time = false);
 
+  // allocate message headers, reserving the required space
+  void set_command(const std::string &command, uint32_t magic = TESTNET3_MAGIC);
+
+  std::unique_ptr<char[]> move_buffer(size_t *sz, bool finish = true) {
+    if (finish) finish_headers();
+    return buf_.move_buffer(sz);
+  }
+
  private:
-  void push_bytes(const void *addr, size_t len) { buf_.copy(addr, len); }
+  void push_bytes(const void *addr, size_t len) { buf_.append(addr, len); }
+  void finish_headers();
 
   Buffer buf_;
 };

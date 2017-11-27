@@ -75,7 +75,7 @@ void Client::shutdown() {
 void Client::send_version(std::shared_ptr<uvw::TcpHandle> conn) {
   const Addr &addr = get_addr(conn);
   Encoder enc("version");
-  enc.push_int<int32_t>(PROTOCOL_VERSION);    // version
+  enc.push_int<uint32_t>(PROTOCOL_VERSION);   // version
   enc.push_int<uint64_t>(0);                  // services
   enc.push_time<uint64_t>();                  // timestamp
   enc.push_netaddr(&addr);                    // addr_recv
@@ -87,11 +87,6 @@ void Client::send_version(std::shared_ptr<uvw::TcpHandle> conn) {
 
   size_t sz;
   std::unique_ptr<char[]> data = enc.move_buffer(&sz);
-
-  // XXX: for debugging
-  std::string hex_string = string_to_hex({data.get(), sz});
-  log->info("version message is: {}", hex_string);
-
   conn->write(std::move(data), sz);
 }
 

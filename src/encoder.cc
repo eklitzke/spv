@@ -16,23 +16,28 @@
 
 #include "./encoder.h"
 
+#include "PicoSHA2/picosha2.h"
+
+#include "./logging.h"
+
 namespace spv {
+MODULE_LOGGER
 template <>
 void Encoder::push_int(uint16_t val) {
   val = htole16(val);
-  buf_.copy(&val, sizeof val);
+  buf_.append(&val, sizeof val);
 }
 
 template <>
 void Encoder::push_int(uint32_t val) {
   val = htole32(val);
-  buf_.copy(&val, sizeof val);
+  buf_.append(&val, sizeof val);
 }
 
 template <>
 void Encoder::push_int(uint64_t val) {
   val = htole64(val);
-  buf_.copy(&val, sizeof val);
+  buf_.append(&val, sizeof val);
 }
 
 void Encoder::push_varint(size_t val) {
@@ -73,4 +78,30 @@ void Encoder::push_addr(const NetAddr *addr) {
   push_int<uint16_t>(addr->port);
 }
 #endif
+
+void Encoder::set_command(const std::string &command, uint32_t magic) {
+  assert(buf_.size() == 0);
+  push_int<uint32_t>(magic);
+  buf_.append_string(command, COMMAND_SIZE);
+  assert(buf_.size() == HEADER_LEN_OFFSET);
+
+  // reserve space for len + checksum
+  buf_.append_zeros(HEADER_SIZE - HEADER_LEN_OFFSET);
+
+  assert(buf_.size() == HEADER_SIZE);
+}
+
+void Encoder::finish_headers() {
+  // insert the length
+  uint32_t len = htole32(buf_.size() - HEADER_SIZE);
+  buf_.insert(&len, sizeof len, HEADER_LEN_OFFSET);
+
+  // insert the checksum
+  const char *data = buf_.data();
+  std::vector<unsigned char> hash1(32), hash2(32);
+  picosha2::hash256(data + HEADER_SIZE, data + buf_.size(), hash1);
+  picosha2::hash256(hash1, hash2);
+  buf_.insert(hash2.data(), sizeof(uint32_t), HEADER_CHECKSUM_OFFSET);
+}
+
 }  // namespace spv

@@ -25,8 +25,7 @@
 namespace spv {
 MODULE_LOGGER
 
-// testnet port
-enum { DEFAULT_PORT = 18332 };
+enum { TESTNET_PORT = 18333 };
 
 Addr::Addr(const addrinfo *ai) : af_(ai->ai_family) {
   assert(ai->ai_family == ai->ai_addr->sa_family);
@@ -55,7 +54,7 @@ Addr::Addr(const addrinfo *ai) : af_(ai->ai_family) {
       log->warn("unknown address family {}", ai->ai_addr->sa_family);
       return;
   }
-  uvw_addr_.port = DEFAULT_PORT;
+  uvw_addr_.port = TESTNET_PORT;
   uvw_addr_.ip = buf;
 }
 }

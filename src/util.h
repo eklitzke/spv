@@ -24,7 +24,7 @@
 namespace spv {
 extern std::mt19937_64 g;
 
-// convert a raw byte string to hex
+// convert a raw byte string to hex (for debugging)
 std::string string_to_hex(const std::string& input);
 
 // generate a random uint64_t value
