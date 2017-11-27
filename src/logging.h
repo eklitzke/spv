@@ -25,4 +25,4 @@
 
 #define DECLARE_LOGGER(name) auto name = spdlog::stdout_color_mt(__FILE__);
 
-#define DEFINE_LOGGER auto log = spdlog::stdout_color_mt(__FILE__);
+#define MODULE_LOGGER static auto log = spdlog::stdout_color_mt(__FILE__);

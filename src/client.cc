@@ -26,7 +26,7 @@
 #include "./util.h"
 
 namespace spv {
-DEFINE_LOGGER
+MODULE_LOGGER
 
 static const std::chrono::seconds NO_REPEAT{0};
 
@@ -37,9 +37,6 @@ static const std::vector<std::string> testSeeds = {
 };
 
 enum { PROTOCOL_VERSION = 70001 };
-
-// testnet port
-enum { DEFAULT_PORT = 18332 };
 
 void Client::run() {
   for (const auto &seed : testSeeds) {
@@ -90,45 +87,9 @@ void Client::lookup_seed(const std::string &seed) {
   request->on<uvw::ErrorEvent>(
       [](const auto &, auto &) { log->error("dns resolution failed"); });
   request->on<uvw::AddrInfoEvent>([this, seed](const auto &event, auto &) {
-    char buf[INET6_ADDRSTRLEN];
-    memset(buf, 0, sizeof buf);
-
-    sockaddr_in *sa4;
-    sockaddr_in6 *sa6;
-    uvw::Addr addr;
-    addr.port = DEFAULT_PORT;
-
     for (const addrinfo *p = event.data.get(); p != nullptr; p = p->ai_next) {
-      switch (p->ai_addr->sa_family) {
-        case AF_INET:
-          sa4 = reinterpret_cast<sockaddr_in *>(p->ai_addr);
-          if (inet_ntop(sa4->sin_family, &sa4->sin_addr, buf, sizeof buf) ==
-              nullptr) {
-            log->error("inet_ntop failed: {}", strerror(errno));
-            continue;
-          }
-          break;
-        case AF_INET6:
-#ifdef DISABLE_IPV6
-          continue;
-#else
-          sa6 = reinterpret_cast<sockaddr_in6 *>(p->ai_addr);
-          if (inet_ntop(sa6->sin6_family, &sa6->sin6_addr, buf, sizeof buf) ==
-              nullptr) {
-            log->error("inet_ntop failed: {}", strerror(errno));
-            continue;
-          }
-          break;
-#endif
-        default:
-          log->warn("unknown address family {}", p->ai_addr->sa_family);
-          break;
-      }
-      addr.ip = buf;
-      auto x = known_peers_.insert(addr);
-      if (x.second) {
-        log->debug("added peer {} (from seed {})", addr, seed);
-      }
+      Addr addr(p);
+      known_peers_.insert(addr);
     }
     connect_to_peers();
   });
@@ -140,7 +101,7 @@ void Client::connect_to_peers() {
     return;
   }
 
-  std::vector<uvw::Addr> peers(known_peers_.cbegin(), known_peers_.cend());
+  std::vector<Addr> peers(known_peers_.cbegin(), known_peers_.cend());
   shuffle(peers);
   while (connections_.size() < max_connections_ && !peers.empty()) {
     auto it = peers.begin();
@@ -152,11 +113,11 @@ void Client::connect_to_peers() {
   }
 }
 
-void Client::connect_to_peer(const uvw::Addr &addr) {
+void Client::connect_to_peer(const Addr &addr) {
   log->debug("connecting to {}", addr);
 
   auto conn = loop_.resource<uvw::TcpHandle>();
-  conn->data(std::make_shared<uvw::Addr>(addr));
+  conn->data(std::make_shared<Addr>(addr));
 
   auto timer = loop_.resource<uvw::TimerHandle>();
   auto weak_timer = timer->weak_from_this();
@@ -189,7 +150,7 @@ void Client::connect_to_peer(const uvw::Addr &addr) {
     log->info("remote peer {} closed connection", addr);
     remove_connection(&c);
   });
-  conn->connect(addr);
+  conn->connect(addr.uvw_addr());
   connections_.push_back(conn);
 
   timer->once<uvw::ErrorEvent>(

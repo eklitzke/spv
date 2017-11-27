@@ -52,6 +52,14 @@ void Encoder::push_varint(size_t val) {
   push_int<uint64_t>(val);
 }
 
+void Encoder::push_netaddr(const Addr &addr, uint64_t services,
+                           bool include_time) {
+  if (include_time) {
+    push_time<uint32_t>();
+  }
+  push_int<uint64_t>(services);
+}
+
 #if 0
 void Encoder::push_addr(const NetAddr *addr) {
   if (addr == nullptr) {

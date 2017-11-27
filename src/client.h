@@ -21,6 +21,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "./addr.h"
 #include "./config.h"
 #include "./encoder.h"
 #include "./logging.h"
@@ -45,7 +46,7 @@ class Client {
   const size_t max_connections_;
   const uint64_t connection_nonce_;
   uvw::Loop &loop_;
-  std::unordered_set<uvw::Addr> known_peers_;
+  std::unordered_set<Addr> known_peers_;
   std::vector<std::shared_ptr<uvw::TcpHandle>> connections_;
 
   // get peers from a dns seed
@@ -55,7 +56,7 @@ class Client {
   void connect_to_peers();
 
   // connect to a specific peer
-  void connect_to_peer(const uvw::Addr &addr);
+  void connect_to_peer(const Addr &addr);
 
   // enqueue connections
   void remove_connection(uvw::TcpHandle *conn, bool reconnect = true);

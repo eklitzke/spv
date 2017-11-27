@@ -27,8 +27,8 @@
 
 #include <string>
 
+#include "./addr.h"
 #include "./buffer.h"
-#include "./uvw.h"
 
 namespace spv {
 // Encoder can encode data.
@@ -67,7 +67,7 @@ class Encoder {
 
   void push_varint(size_t val);
 
-  void push_netaddr(const uvw::Addr &addr, uint64_t services = 0,
+  void push_netaddr(const Addr &addr, uint64_t services = 0,
                     bool include_time = false);
 
  private:
