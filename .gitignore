@@ -1,6 +1,3 @@
 Makefile
-compile
-depcomp
-install-sh
-missing
-spv
+build-ax
+src/spv
