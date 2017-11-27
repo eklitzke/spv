@@ -29,6 +29,11 @@ class Buffer {
   Buffer() : Buffer(64) {}
   explicit Buffer(size_t cap)
       : capacity_(cap), size_(0), data_(new char[cap]) {}
+  Buffer(const Buffer &othere) = delete;
+  Buffer(Buffer &&other)
+      : capacity_(other.capacity_),
+        size_(other.size_),
+        data_(std::move(other.data_)) {}
 
   // append data
   void append(const void *addr, size_t len) {

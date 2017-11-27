@@ -69,6 +69,11 @@ class Encoder {
   void push_netaddr(const Addr *addr, uint64_t services = 0,
                     bool include_time = false);
 
+  inline void push_netaddr(const Addr &addr, uint64_t services = 0,
+                           bool include_time = false) {
+    push_netaddr(&addr, services, include_time);
+  }
+
   // allocate message headers, reserving the required space
   void set_command(const std::string &command, uint32_t magic = TESTNET3_MAGIC);
 

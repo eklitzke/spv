@@ -22,6 +22,7 @@
 #include <chrono>
 #include <iostream>
 
+#include "./config.h"
 #include "./logging.h"
 #include "./protocol.h"
 #include "./util.h"
@@ -37,52 +38,23 @@ static const std::vector<std::string> testSeeds = {
     "testnet-seed.bluematt.me",
 };
 
-static const Addr &get_addr(uvw::TcpHandle *conn) {
-  return *conn->data<Addr>();
-}
-static const Addr &get_addr(std::shared_ptr<uvw::TcpHandle> conn) {
-  return *conn->data<Addr>();
-}
-
 void Client::run() {
   for (const auto &seed : testSeeds) {
     lookup_seed(seed);
   }
-#ifdef ENABLE_VALGRIND
-  auto timer = loop_.resource<uvw::TimerHandle>();
-  timer->on<uvw::TimerEvent>([this](const auto &, auto &timer) {
-    log->warn("initiating shutdown");
-    timer.close();
-    shutdown();
-  });
-  timer->start(std::chrono::seconds(10), NO_REPEAT);
-#endif
 }
 
-// for debugging only
-void Client::shutdown() {
-  log->warn("shutting down");
-  for (auto &conn : connections_) {
-    auto addr = conn->data<Addr>();
-    log->debug("forcibly shutting down connection to {}", *addr);
-    conn->close();
-  }
-  connections_.clear();
-  loop_.stop();
-}
-
-void Client::send_version(std::shared_ptr<uvw::TcpHandle> conn) {
-  const Addr &addr = get_addr(conn);
+void Client::send_version(Connection &conn) {
   Encoder enc("version");
   enc.push_int<uint32_t>(PROTOCOL_VERSION);   // version
   enc.push_int<uint64_t>(0);                  // services
   enc.push_time<uint64_t>();                  // timestamp
-  enc.push_netaddr(&addr);                    // addr_recv
+  enc.push_netaddr(conn.addr());              // addr_recv
   enc.push_netaddr(nullptr);                  // addr_from
   enc.push_int<uint64_t>(connection_nonce_);  // nonce
   enc.push_string(SPV_USER_AGENT);            // user-agent
-  enc.push_int<uint32_t>(1);                  // start height
-  enc.push_bool(false);                       // relay
+  enc.push_int<uint32_t>(0);                  // start height
+  enc.push_bool(true);                        // relay
 
   size_t sz;
   std::unique_ptr<char[]> data = enc.move_buffer(&sz);
@@ -122,11 +94,11 @@ void Client::connect_to_peers() {
 }
 
 void Client::connect_to_peer(const Addr &addr) {
-  log->debug("connecting to {}", addr);
+  log->debug("connecting to peer {}", addr);
 
-  auto conn = loop_.resource<uvw::TcpHandle>();
-  conn->data(std::make_shared<Addr>(addr));
-  assert(get_addr(conn) == addr);
+  auto pr = connections_.emplace(addr, loop_);
+  assert(pr.second);
+  Connection &conn = const_cast<Connection &>(*pr.first);
 
   auto timer = loop_.resource<uvw::TimerHandle>();
   auto weak_timer = timer->weak_from_this();
@@ -134,55 +106,50 @@ void Client::connect_to_peer(const Addr &addr) {
     if (auto t = weak_timer.lock()) t->close();
   };
 
-  conn->once<uvw::ErrorEvent>([=](const auto &, auto &c) {
-    log->debug("error from {}", addr);
-    cancel_timer();
-    remove_connection(&c);
-  });
+  conn->once<uvw::ErrorEvent>(
+      [this, cancel_timer, &conn](const auto &, auto &c) {
+        log->debug("error from {}", conn.addr());
+        cancel_timer();
+        remove_connection(conn);
+      });
   conn->on<uvw::DataEvent>(
       [](const auto &, auto &) { log->info("got a data read event"); });
   conn->once<uvw::CloseEvent>([=](const auto &, auto &) {
     log->debug("closing connection {}", addr);
     cancel_timer();
   });
-  conn->once<uvw::ConnectEvent>([=](const auto &, auto &) {
+  conn->once<uvw::ConnectEvent>([=, &conn](const auto &, auto &) {
     log->info("connected to new peer {}", addr);
     cancel_timer();
-#ifndef ENABLE_VALGRIND
     conn->read();
     send_version(conn);
-#endif
   });
-  conn->once<uvw::EndEvent>([=](const auto &, auto &c) {
+  conn->once<uvw::EndEvent>([=, &conn](const auto &, auto &c) {
     log->info("remote peer {} closed connection", addr);
-    remove_connection(&c);
+    remove_connection(conn);
   });
-  conn->connect(addr.uvw_addr());
-  connections_.push_back(conn);
+
+  conn.connect();
 
   timer->once<uvw::ErrorEvent>(
       [=](const auto &, auto &timer) { timer.close(); });
-  timer->on<uvw::TimerEvent>([=](const auto &, auto &timer) {
-    log->warn("connection to {} timed out", addr);
-    remove_connection(conn.get());
+  timer->on<uvw::TimerEvent>([this, &conn](const auto &, auto &timer) {
+    log->warn("connection to {} timed out", conn.addr());
+    remove_connection(conn);
     timer.close();
   });
   timer->start(std::chrono::seconds(1), NO_REPEAT);
 }
 
-void Client::remove_connection(uvw::TcpHandle *conn, bool reconnect) {
-  if (conn->closing()) return;
-
-  bool removed = false;
-  for (auto it = connections_.begin(); it != connections_.end(); it++) {
-    if (it->get() == conn) {
-      connections_.erase(it);
-      removed = true;
-      break;
-    }
+void Client::remove_connection(Connection &conn, bool reconnect) {
+  if (conn->closing()) {
+    log->debug("ignoring remove_connection for conn already in closing state");
+    return;
   }
+
+  bool removed = connections_.erase(conn);
   if (!removed) {
-    log->error("failed to remove connection to peer {}", get_addr(conn));
+    log->error("failed to remove connection to peer {}", conn.addr());
     return;
   }
 

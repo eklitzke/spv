@@ -22,7 +22,8 @@
 #include <vector>
 
 #include "./addr.h"
-#include "./config.h"
+#include "./buffer.h"
+#include "./connection.h"
 #include "./encoder.h"
 #include "./logging.h"
 #include "./util.h"
@@ -47,7 +48,8 @@ class Client {
   const uint64_t connection_nonce_;
   uvw::Loop &loop_;
   std::unordered_set<Addr> known_peers_;
-  std::vector<std::shared_ptr<uvw::TcpHandle>> connections_;
+  std::unordered_set<Connection> connections_;
+  Buffer read_buf_;
 
   // get peers from a dns seed
   void lookup_seed(const std::string &seed);
@@ -59,11 +61,8 @@ class Client {
   void connect_to_peer(const Addr &addr);
 
   // enqueue connections
-  void remove_connection(uvw::TcpHandle *conn, bool reconnect = true);
+  void remove_connection(Connection &conn, bool reconnect = true);
 
-  void send_version(std::shared_ptr<uvw::TcpHandle> conn);
-
-  // for valgrind
-  void shutdown();
+  void send_version(Connection &conn);
 };
 }  // namespace spv
