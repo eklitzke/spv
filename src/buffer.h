@@ -35,7 +35,7 @@ class Buffer {
  public:
   Buffer() : Buffer(64) {}
   explicit Buffer(size_t cap)
-      : capacity_(cap), size_(0), data_(new unsigned char[cap]) {}
+      : capacity_(cap), size_(0), data_(new char[cap]) {}
 
   // allocate message headers, reserving the required space
   void allocate_headers(const std::string &cmd) {
@@ -71,14 +71,19 @@ class Buffer {
   }
 
   inline size_t size() const { return size_; }
-  inline std::string string() const {
-    return std::string(reinterpret_cast<const char *>(data_.get()), size_);
+  inline const char *data() const { return data_.get(); }
+
+  std::unique_ptr<char[]> move_buffer(size_t *sz) {
+    *sz = size_;
+    size_ = 0;
+    capacity_ = 0;
+    return std::move(data_);
   }
 
  private:
   size_t capacity_;
   size_t size_;
-  std::unique_ptr<unsigned char[]> data_;
+  std::unique_ptr<char[]> data_;
 
   // Ensure there's enough capacity to add len bytes.
   void ensure_capacity(size_t len) {
@@ -87,7 +92,7 @@ class Buffer {
       new_capacity *= 2;
     }
     if (new_capacity > capacity_) {
-      unsigned char *new_data = new unsigned char[new_capacity];
+      char *new_data = new char[new_capacity];
       memmove(new_data, data_.get(), capacity_);
       data_.reset(new_data);
       capacity_ = new_capacity;

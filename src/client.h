@@ -61,6 +61,8 @@ class Client {
   // enqueue connections
   void remove_connection(uvw::TcpHandle *conn, bool reconnect = true);
 
+  void send_version(std::shared_ptr<uvw::TcpHandle> conn);
+
   // for valgrind
   void shutdown();
 };

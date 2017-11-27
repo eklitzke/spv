@@ -56,7 +56,7 @@ AS_COMPILER_FLAG([-fdiagnostics-color=auto],
 
 PKG_CHECK_MODULES([libuv], [libuv >= 1])
 
-AC_DEFINE([USERAGENT], ["github.com/eklitzke/spv"], [User agent to advertise.])
+AC_DEFINE([SPV_USER_AGENT], ["github.com/eklitzke/spv"], [User agent to advertise.])
 
 gitcommit=`cd $srcdir && git describe --always`
 AS_IF([test x"$gitcommit" = x],

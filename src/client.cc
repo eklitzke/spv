@@ -38,6 +38,13 @@ static const std::vector<std::string> testSeeds = {
 
 enum { PROTOCOL_VERSION = 70001 };
 
+static const Addr &get_addr(uvw::TcpHandle *conn) {
+  return *conn->data<Addr>();
+}
+static const Addr &get_addr(std::shared_ptr<uvw::TcpHandle> conn) {
+  return *conn->data<Addr>();
+}
+
 void Client::run() {
   for (const auto &seed : testSeeds) {
     lookup_seed(seed);
@@ -65,22 +72,28 @@ void Client::shutdown() {
   loop_.stop();
 }
 
-#if 0
-void Client::send_version(const NetAddr &addr) {
+void Client::send_version(std::shared_ptr<uvw::TcpHandle> conn) {
+  const Addr &addr = get_addr(conn);
   Encoder enc("version");
   enc.push_int<int32_t>(PROTOCOL_VERSION);    // version
   enc.push_int<uint64_t>(0);                  // services
   enc.push_time<uint64_t>();                  // timestamp
-  enc.push_addr(&addr);                       // addr_recv
-  enc.push_addr(nullptr);                     // addr_from
+  enc.push_netaddr(&addr);                    // addr_recv
+  enc.push_netaddr(nullptr);                  // addr_from
   enc.push_int<uint64_t>(connection_nonce_);  // nonce
-  enc.push_string(USERAGENT);                 // user-agent
+  enc.push_string(SPV_USER_AGENT);            // user-agent
   enc.push_int<uint32_t>(1);                  // start height
   enc.push_bool(false);                       // relay
 
-  log->info("version message is: {}", string_to_hex(enc.serialize()));
+  size_t sz;
+  std::unique_ptr<char[]> data = enc.move_buffer(&sz);
+
+  // XXX: for debugging
+  std::string hex_string = string_to_hex({data.get(), sz});
+  log->info("version message is: {}", hex_string);
+
+  conn->write(std::move(data), sz);
 }
-#endif
 
 void Client::lookup_seed(const std::string &seed) {
   auto request = loop_.resource<uvw::GetAddrInfoReq>();
@@ -119,6 +132,7 @@ void Client::connect_to_peer(const Addr &addr) {
 
   auto conn = loop_.resource<uvw::TcpHandle>();
   conn->data(std::make_shared<Addr>(addr));
+  assert(get_addr(conn) == addr);
 
   auto timer = loop_.resource<uvw::TimerHandle>();
   auto weak_timer = timer->weak_from_this();
@@ -142,9 +156,7 @@ void Client::connect_to_peer(const Addr &addr) {
     cancel_timer();
 #ifndef ENABLE_VALGRIND
     conn->read();
-    auto data = std::make_unique<char[]>(2);
-    memmove(data.get(), "bc", 2);
-    conn->write(std::move(data), 2);
+    send_version(conn);
 #endif
   });
   conn->once<uvw::EndEvent>([=](const auto &, auto &c) {
@@ -176,8 +188,7 @@ void Client::remove_connection(uvw::TcpHandle *conn, bool reconnect) {
     }
   }
   if (!removed) {
-    auto addr = conn->data<Addr>();
-    log->error("failed to remove connection to peer {}", *addr);
+    log->error("failed to remove connection to peer {}", get_addr(conn));
     return;
   }
 

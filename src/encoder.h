@@ -40,9 +40,9 @@ class Encoder {
     }
   }
 
-  inline std::string serialize(bool finish = true) {
+  std::unique_ptr<char[]> move_buffer(size_t *sz, bool finish = true) {
     if (finish) buf_.finish_headers();
-    return buf_.string();
+    return buf_.move_buffer(sz);
   }
 
   template <typename T>
@@ -67,7 +67,8 @@ class Encoder {
 
   void push_varint(size_t val);
 
-  void push_netaddr(const Addr &addr, uint64_t services = 0,
+  // addr may be null
+  void push_netaddr(const Addr *addr, uint64_t services = 0,
                     bool include_time = false);
 
  private:
