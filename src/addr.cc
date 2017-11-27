@@ -34,34 +34,28 @@ Addr::Addr(const addrinfo *ai) : af_(ai->ai_family) {
   char buf[INET6_ADDRSTRLEN];
   memset(buf, 0, sizeof buf);
 
-  uvw_addr_.port = DEFAULT_PORT;
-
-  sockaddr_in *sa4;
-  sockaddr_in6 *sa6;
-
   switch (af_) {
-    case AF_INET:
-      sa4 = reinterpret_cast<sockaddr_in *>(ai->ai_addr);
+    case AF_INET: {
+      sockaddr_in *sa4 = reinterpret_cast<sockaddr_in *>(ai->ai_addr);
       if (inet_ntop(sa4->sin_family, &sa4->sin_addr, buf, sizeof buf) ==
           nullptr) {
         log->error("inet_ntop failed: {}", strerror(errno));
       }
       break;
-    case AF_INET6:
-#ifdef DISABLE_IPV6
-      break;
-#else
-      sa6 = reinterpret_cast<sockaddr_in6 *>(ai->ai_addr);
+    }
+    case AF_INET6: {
+      sockaddr_in6 *sa6 = reinterpret_cast<sockaddr_in6 *>(ai->ai_addr);
       if (inet_ntop(sa6->sin6_family, &sa6->sin6_addr, buf, sizeof buf) ==
           nullptr) {
         log->error("inet_ntop failed: {}", strerror(errno));
       }
       break;
-#endif
+    }
     default:
       log->warn("unknown address family {}", ai->ai_addr->sa_family);
-      break;
+      return;
   }
+  uvw_addr_.port = DEFAULT_PORT;
   uvw_addr_.ip = buf;
 }
 }

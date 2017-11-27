@@ -57,7 +57,7 @@ void Client::run() {
 void Client::shutdown() {
   log->warn("shutting down");
   for (auto &conn : connections_) {
-    auto addr = conn->data<uvw::Addr>();
+    auto addr = conn->data<Addr>();
     log->debug("forcibly shutting down connection to {}", *addr);
     conn->close();
   }
@@ -86,10 +86,11 @@ void Client::lookup_seed(const std::string &seed) {
   auto request = loop_.resource<uvw::GetAddrInfoReq>();
   request->on<uvw::ErrorEvent>(
       [](const auto &, auto &) { log->error("dns resolution failed"); });
-  request->on<uvw::AddrInfoEvent>([this, seed](const auto &event, auto &) {
+  request->on<uvw::AddrInfoEvent>([=](const auto &event, auto &) {
     for (const addrinfo *p = event.data.get(); p != nullptr; p = p->ai_next) {
       Addr addr(p);
       known_peers_.insert(addr);
+      log->debug("added new peer {} (via seed {})", addr, seed);
     }
     connect_to_peers();
   });
@@ -175,7 +176,7 @@ void Client::remove_connection(uvw::TcpHandle *conn, bool reconnect) {
     }
   }
   if (!removed) {
-    auto addr = conn->data<uvw::Addr>();
+    auto addr = conn->data<Addr>();
     log->error("failed to remove connection to peer {}", *addr);
     return;
   }

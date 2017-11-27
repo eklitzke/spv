@@ -29,8 +29,11 @@ AC_CHECK_TYPES([ptrdiff_t])
 AC_FUNC_REALLOC
 AC_CHECK_FUNCS([memmove])
 
+CXXFLAGS="-I ../third_party/spdlog/include -I ../third_party"
+AS_COMPILER_FLAG([-std=c++17],
+                 [CXXFLAGS+=" -std=c++17"])
 AS_COMPILER_FLAG([-fdiagnostics-color=auto],
-                 [ERROR_CFLAGS="-fdiagnostics-color=auto"])
+                 [CXXFLAGS+=" -fdiagnostics-color=auto"])
 
 PKG_CHECK_MODULES([libuv], [libuv >= 1])
 
