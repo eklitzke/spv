@@ -23,6 +23,7 @@
 #include <iostream>
 
 #include "./logging.h"
+#include "./protocol.h"
 #include "./util.h"
 
 namespace spv {
@@ -35,8 +36,6 @@ static const std::vector<std::string> testSeeds = {
     "testnet-seed.bitcoin.jonasschnelli.ch", "seed.tbtc.petertodd.org",
     "testnet-seed.bluematt.me",
 };
-
-enum { PROTOCOL_VERSION = 70001 };
 
 static const Addr &get_addr(uvw::TcpHandle *conn) {
   return *conn->data<Addr>();

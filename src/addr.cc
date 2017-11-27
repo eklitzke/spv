@@ -21,11 +21,10 @@
 #include <cstring>
 
 #include "./logging.h"
+#include "./protocol.h"
 
 namespace spv {
 MODULE_LOGGER
-
-enum { TESTNET_PORT = 18333 };
 
 Addr::Addr(const addrinfo *ai) : af_(ai->ai_family) {
   assert(ai->ai_family == ai->ai_addr->sa_family);

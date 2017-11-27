@@ -23,18 +23,24 @@
 #include "./uvw.h"
 
 namespace spv {
+union inaddr {
+  in_addr ipv4;
+  in6_addr ipv6;
+};
+
 class Addr {
  public:
   Addr() = delete;
-  Addr(const Addr& other) : af_(other.af_) {
+  Addr(const Addr& other) : af_(other.af_), addr_(other.addr_) {
     uvw_addr_.ip = other.uvw_addr_.ip;
     uvw_addr_.port = other.uvw_addr_.port;
   }
   explicit Addr(const addrinfo* ai);
 
   inline int af() const { return af_; }
-  inline bool is_ipv4() const { return af_ == AF_INET; }
-  inline bool is_ipv6() const { return af_ == AF_INET6; }
+  inline in_addr ipv4() const { return addr_.ipv4; }
+  inline in6_addr ipv6() const { return addr_.ipv6; }
+  inline uint16_t port() const { return static_cast<uint16_t>(uvw_addr_.port); }
   inline const uvw::Addr& uvw_addr() const { return uvw_addr_; }
 
   inline bool operator==(const Addr& other) const {
@@ -43,6 +49,7 @@ class Addr {
 
  private:
   int af_;  // address family: AF_INET or AF_INET6
+  inaddr addr_;
   uvw::Addr uvw_addr_;
 };
 

@@ -63,21 +63,26 @@ void Encoder::push_netaddr(const Addr *addr, uint64_t services,
     push_time<uint32_t>();
   }
   push_int<uint64_t>(services);
-}
 
-#if 0
-void Encoder::push_addr(const NetAddr *addr) {
   if (addr == nullptr) {
-    push_bytes(reinterpret_cast<const void *>(&empty_netaddr),
-               sizeof empty_netaddr);
+    buf_.append_zeros(ADDR_SIZE + PORT_SIZE);
     return;
   }
-  push_int<uint32_t>(addr->time);
-  push_int<uint64_t>(addr->services);
-  push_bytes(reinterpret_cast<const void *>(&addr->addr), sizeof addr->addr);
-  push_int<uint16_t>(addr->port);
+
+  const int af = addr->af();
+  switch (af) {
+    case AF_INET:
+      push_ipv4(addr->ipv4());
+      break;
+    case AF_INET6:
+      push_ipv6(addr->ipv6());
+      break;
+    default:
+      log->error("unknown address family {}", af);
+      return;
+  }
+  push_port(addr->port());
 }
-#endif
 
 void Encoder::set_command(const std::string &command, uint32_t magic) {
   assert(buf_.size() == 0);

@@ -17,6 +17,7 @@
 #pragma once
 
 #include <endian.h>
+#include <netinet/in.h>
 
 #include <cassert>
 #include <cstddef>
@@ -28,20 +29,13 @@
 
 #include "./addr.h"
 #include "./buffer.h"
+#include "./protocol.h"
 
 namespace spv {
-
-enum {
-  COMMAND_SIZE = 12,
-  HEADER_PADDING = 8,
-  HEADER_SIZE = 24,
-  HEADER_LEN_OFFSET = 16,
-  HEADER_CHECKSUM_OFFSET = 20,
-};
-
-inline const uint32_t MAINNET_MAGIC = 0xD9B4BEF9;
-inline const uint32_t TESTNET_MAGIC = 0xDAB5BFFA;
-inline const uint32_t TESTNET3_MAGIC = 0x0709110B;
+enum { IPV4_PADDING = sizeof(in6_addr) - sizeof(in_addr) };
+static_assert(sizeof(in_addr) == 4);
+static_assert(sizeof(in6_addr) == 16);
+static_assert(IPV4_PADDING == 12);
 
 // Encoder can encode data.
 class Encoder {
@@ -86,6 +80,20 @@ class Encoder {
  private:
   void push_bytes(const void *addr, size_t len) { buf_.append(addr, len); }
   void finish_headers();
+
+  inline void push_ipv4(const in_addr &addr) {
+    buf_.append_zeros(IPV4_PADDING);
+    buf_.append(&addr.s_addr, sizeof addr);
+  }
+
+  inline void push_ipv6(const in6_addr &addr) {
+    buf_.append(&addr.s6_addr, sizeof addr);
+  }
+
+  inline void push_port(uint16_t port) {
+    uint16_t be_port = htobe16(port);
+    buf_.append(&be_port, sizeof be_port);
+  }
 
   Buffer buf_;
 };
