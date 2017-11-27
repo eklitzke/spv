@@ -19,6 +19,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
+#include <memory>
 #include <vector>
 
 #include "PicoSHA2/picosha2.h"
@@ -34,14 +35,7 @@ class Buffer {
  public:
   Buffer() : Buffer(64) {}
   explicit Buffer(size_t cap)
-      : capacity_(cap),
-        size_(0),
-        data_(reinterpret_cast<unsigned char *>(std::malloc(cap))) {
-    if (data_ == nullptr) {
-      throw std::bad_alloc();
-    }
-  }
-  ~Buffer() { std::free(data_); }
+      : capacity_(cap), size_(0), data_(new unsigned char[cap]) {}
 
   // allocate message headers, reserving the required space
   void allocate_headers(const std::string &cmd) {
@@ -52,7 +46,7 @@ class Buffer {
     static const uint32_t testnet_magic = 0x0b110907;
     copy(&testnet_magic, sizeof testnet_magic);
 
-    memmove(data_ + COMMAND_OFFSET, cmd.c_str(), cmd.size());
+    memmove(data_.get() + COMMAND_OFFSET, cmd.c_str(), cmd.size());
 
     size_ = 24;
   }
@@ -60,31 +54,31 @@ class Buffer {
   void finish_headers() {
     // insert the length
     uint32_t len = htole32(size_ - MSG_HEADER_SIZE);
-    memmove(data_ + PAYLOAD_OFFSET, &len, sizeof len);
+    memmove(data_.get() + PAYLOAD_OFFSET, &len, sizeof len);
 
     // insert the checksum
     std::vector<unsigned char> hash1(32), hash2(32);
-    picosha2::hash256(data_ + MSG_HEADER_SIZE, data_ + size_, hash1);
+    picosha2::hash256(data_.get() + MSG_HEADER_SIZE, data_.get() + size_,
+                      hash1);
     picosha2::hash256(hash1, hash2);
-    memmove(data_ + CHECKSUM_OFFSET, hash2.data(), 4);
+    memmove(data_.get() + CHECKSUM_OFFSET, hash2.data(), 4);
   }
 
   void copy(const void *addr, size_t len) {
     ensure_capacity(len);
-    memmove(data_ + static_cast<ptrdiff_t>(size_), addr, len);
+    memmove(data_.get() + static_cast<ptrdiff_t>(size_), addr, len);
     size_ += len;
   }
 
   inline size_t size() const { return size_; }
-  inline unsigned char *data() const { return data_; }
   inline std::string string() const {
-    return std::string(reinterpret_cast<const char *>(data_), size_);
+    return std::string(reinterpret_cast<const char *>(data_.get()), size_);
   }
 
  private:
   size_t capacity_;
   size_t size_;
-  unsigned char *data_;
+  std::unique_ptr<unsigned char[]> data_;
 
   // Ensure there's enough capacity to add len bytes.
   void ensure_capacity(size_t len) {
@@ -93,15 +87,11 @@ class Buffer {
       new_capacity *= 2;
     }
     if (new_capacity > capacity_) {
-      // Realloc the buffer, and set the extra bytes to 0 for good hygiene.
-      if (void *mem = std::realloc(data_, new_capacity)) {
-        data_ = static_cast<unsigned char *>(mem);
-        memset(data_ + capacity_, 0, new_capacity - capacity_);
-        capacity_ = new_capacity;
-      } else
-        throw std::bad_alloc();
+      unsigned char *new_data = new unsigned char[new_capacity];
+      memmove(new_data, data_.get(), capacity_);
+      data_.reset(new_data);
+      capacity_ = new_capacity;
     }
   }
 };
-
 }  // namespace spv

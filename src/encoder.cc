@@ -17,8 +17,6 @@
 #include "./encoder.h"
 
 namespace spv {
-static const NetAddr empty_netaddr;
-
 template <>
 void Encoder::push_int(uint16_t val) {
   val = htole16(val);
@@ -54,6 +52,7 @@ void Encoder::push_varint(size_t val) {
   push_int<uint64_t>(val);
 }
 
+#if 0
 void Encoder::push_addr(const NetAddr *addr) {
   if (addr == nullptr) {
     push_bytes(reinterpret_cast<const void *>(&empty_netaddr),
@@ -65,4 +64,5 @@ void Encoder::push_addr(const NetAddr *addr) {
   push_bytes(reinterpret_cast<const void *>(&addr->addr), sizeof addr->addr);
   push_int<uint16_t>(addr->port);
 }
+#endif
 }  // namespace spv

@@ -68,6 +68,7 @@ void Client::shutdown() {
   loop_.stop();
 }
 
+#if 0
 void Client::send_version(const NetAddr &addr) {
   Encoder enc("version");
   enc.push_int<int32_t>(PROTOCOL_VERSION);    // version
@@ -82,6 +83,7 @@ void Client::send_version(const NetAddr &addr) {
 
   log->info("version message is: {}", string_to_hex(enc.serialize()));
 }
+#endif
 
 void Client::lookup_seed(const std::string &seed) {
   auto request = loop_.resource<uvw::GetAddrInfoReq>();
@@ -155,12 +157,6 @@ void Client::connect_to_peer(const uvw::Addr &addr) {
 
   auto conn = loop_.resource<uvw::TcpHandle>();
   conn->data(std::make_shared<uvw::Addr>(addr));
-  auto weak_conn = conn->weak_from_this();
-  auto cancel_conn = [=]() {
-    if (auto c = weak_conn.lock()) {
-      if (!c->closing()) remove_connection(c.get());
-    }
-  };
 
   auto timer = loop_.resource<uvw::TimerHandle>();
   auto weak_timer = timer->weak_from_this();
@@ -168,10 +164,10 @@ void Client::connect_to_peer(const uvw::Addr &addr) {
     if (auto t = weak_timer.lock()) t->close();
   };
 
-  conn->once<uvw::ErrorEvent>([=](const auto &, auto &conn) {
+  conn->once<uvw::ErrorEvent>([=](const auto &, auto &c) {
     log->debug("error from {}", addr);
     cancel_timer();
-    cancel_conn();
+    remove_connection(&c);
   });
   conn->on<uvw::DataEvent>(
       [](const auto &, auto &) { log->info("got a data read event"); });
@@ -181,12 +177,17 @@ void Client::connect_to_peer(const uvw::Addr &addr) {
   });
   conn->once<uvw::ConnectEvent>([=](const auto &, auto &) {
     log->info("connected to new peer {}", addr);
-    conn->read();
     cancel_timer();
+#ifndef ENABLE_VALGRIND
+    conn->read();
+    auto data = std::make_unique<char[]>(2);
+    memmove(data.get(), "bc", 2);
+    conn->write(std::move(data), 2);
+#endif
   });
-  conn->once<uvw::EndEvent>([=](const auto &, auto &) {
+  conn->once<uvw::EndEvent>([=](const auto &, auto &c) {
     log->info("remote peer {} closed connection", addr);
-    cancel_conn();
+    remove_connection(&c);
   });
   conn->connect(addr);
   connections_.push_back(conn);
@@ -194,15 +195,16 @@ void Client::connect_to_peer(const uvw::Addr &addr) {
   timer->once<uvw::ErrorEvent>(
       [=](const auto &, auto &timer) { timer.close(); });
   timer->on<uvw::TimerEvent>([=](const auto &, auto &timer) {
-    // the connection will actually be closed in the conn's error event
     log->warn("connection to {} timed out", addr);
-    cancel_conn();
+    remove_connection(conn.get());
     timer.close();
   });
   timer->start(std::chrono::seconds(1), NO_REPEAT);
 }
 
 void Client::remove_connection(uvw::TcpHandle *conn, bool reconnect) {
+  if (conn->closing()) return;
+
   bool removed = false;
   for (auto it = connections_.begin(); it != connections_.end(); it++) {
     if (it->get() == conn) {

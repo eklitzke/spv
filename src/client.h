@@ -60,9 +60,6 @@ class Client {
   // enqueue connections
   void remove_connection(uvw::TcpHandle *conn, bool reconnect = true);
 
-  // Send a version message.
-  void send_version(const NetAddr &addr);
-
   // for valgrind
   void shutdown();
 };
