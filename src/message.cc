@@ -293,6 +293,84 @@ struct Decoder {
   }
 };
 
+typedef std::function<std::unique_ptr<Message>(Decoder &, const Headers &)>
+    handler_t;
+
+class HandlerRegistry {
+ public:
+  HandlerRegistry() {}
+  HandlerRegistry(const HandlerRegistry &other) = delete;
+
+  void add_handler(const std::string &command, handler_t handler) {
+    handlers_.insert(std::make_pair(command, handler));
+  }
+
+  std::unique_ptr<Message> parse(Decoder &dec, const Headers &hdrs) {
+    const std::string &cmd = hdrs.command;
+    const auto it = handlers_.find(cmd);
+    if (it == handlers_.end()) {
+      throw UnknownMessage(cmd);
+    }
+    return std::unique_ptr<Message>(it->second(dec, hdrs));
+  }
+
+ private:
+  std::unordered_map<std::string, handler_t> handlers_;
+};
+
+static HandlerRegistry registry_;
+
+struct MessageParser {
+  MessageParser() = delete;
+  MessageParser(const MessageParser &other) = delete;
+  MessageParser(const std::string &cmd, handler_t callback) {
+    registry_.add_handler(cmd, callback);
+  }
+};
+
+#define DECLARE_PARSER(cmd, callback) \
+  static MessageParser cmd##_parser(#cmd, callback);
+
+DECLARE_PARSER(ping, [](auto &dec, const auto &hdrs) {
+  auto msg = std::make_unique<Ping>(hdrs);
+  dec.pull(msg->nonce);
+  return msg;
+});
+
+DECLARE_PARSER(pong, [](auto &dec, const auto &hdrs) {
+  auto msg = std::make_unique<Pong>(hdrs);
+  dec.pull(msg->nonce);
+  return msg;
+});
+
+DECLARE_PARSER(sendheaders, [](auto &dec, const auto &hdrs) {
+  auto msg = std::make_unique<SendHeaders>(hdrs);
+  return msg;
+});
+
+DECLARE_PARSER(verack, [](auto &dec, const auto &hdrs) {
+  auto msg = std::make_unique<VerAck>(hdrs);
+  return msg;
+});
+
+DECLARE_PARSER(version, [](auto &dec, const auto &hdrs) {
+  auto msg = std::make_unique<Version>(hdrs);
+  dec.pull(msg->version);
+  dec.pull(msg->services);
+  dec.pull(msg->timestamp);
+  dec.pull(msg->addr_recv);
+  if (msg->version >= 106) {
+    dec.pull(msg->addr_from);
+    dec.pull(msg->nonce);
+    dec.pull(msg->user_agent);
+    dec.pull(msg->start_height);
+    if (msg->version >= 70001) {
+      dec.pull(msg->relay);
+    }
+  }
+  return msg;
+});
+
 static std::unique_ptr<Message> internal_decode_message(
     const Peer &peer, const char *data, size_t size, size_t *bytes_consumed) {
   Decoder dec(data, size);
@@ -316,43 +394,7 @@ static std::unique_ptr<Message> internal_decode_message(
   log->debug("pulling {} byte payload for command '{}'", hdrs.payload_size,
              hdrs.command);
 
-  std::unique_ptr<Message> result;
-  const std::string &cmd = hdrs.command;
-  if (cmd == "version") {
-    result.reset(new Version(hdrs));
-    Version *msg = dynamic_cast<Version *>(result.get());
-    dec.pull(msg->version);
-    dec.pull(msg->services);
-    dec.pull(msg->timestamp);
-    dec.pull(msg->addr_recv);
-    if (msg->version >= 106) {
-      dec.pull(msg->addr_from);
-      dec.pull(msg->nonce);
-      dec.pull(msg->user_agent);
-      dec.pull(msg->start_height);
-      if (msg->version >= 70001) {
-        dec.pull(msg->relay);
-      }
-    }
-  } else if (cmd == "verack") {
-    result.reset(new VerAck(hdrs));
-  } else if (cmd == "ping") {
-    result.reset(new Ping(hdrs));
-    Ping *msg = dynamic_cast<Ping *>(result.get());
-    dec.pull(msg->nonce);
-  } else if (cmd == "pong") {
-    result.reset(new Pong(hdrs));
-    Pong *msg = dynamic_cast<Pong *>(result.get());
-    dec.pull(msg->nonce);
-  } else if (cmd == "sendheaders") {
-    result.reset(new SendHeaders(hdrs));
-  } else {
-    throw UnknownMessage(cmd);
-  }
-  if (!dec.validate_msg(result.get())) {
-    throw BadMessage("message failed checksum validation");
-  }
-  return std::move(result);
+  return registry_.parse(dec, hdrs);
 }
 
 std::unique_ptr<Message> decode_message(const Peer &peer, const char *data,
