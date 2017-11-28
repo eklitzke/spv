@@ -19,9 +19,9 @@
 #include <ostream>
 
 std::ostream& operator<<(std::ostream& o, const spv::Peer& p) {
-  return o << p.addr;
+  o << p.addr;
   if (!p.user_agent.empty()) {
-    o << " [" << p.user_agent << "]";
+    o << " " << p.user_agent;
   }
   return o;
 }
