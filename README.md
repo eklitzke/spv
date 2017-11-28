@@ -2,16 +2,25 @@
 
 This is my attempt at writing a from-scratch Bitcoin SPV client. The
 implementation language is C++. This is purely for me to learn about the Bitcoin
-protocol: you shouldn't actually use this, and certainly not on mainnet. If you
-are interested in learning more about how the Bitcoin protocol works, or are
-interested in writing you own SPV client, you may find the source code here
-useful as a reference.
+protocol: you probably shouldn't use this.
+
+If you are interested in learning more about how the Bitcoin protocol works, or
+are interested in writing you own SPV client, you may find the source code here
+useful as a reference. I would also recommend taking a look at
+[libbtc](https://github.com/libbtc/libbtc), which is more fully featured.
 
 ## Status
 
 This code is considered **alpha** and incomplete. The client can connect to the
-peers via the DNS seed list, send `version` messages, and receive `version` and
-`verack` messages.
+peers via the DNS seed list, and send/receive the following message types:
+
+ - ping
+ - pong
+ - version
+ - verack
+
+To avoid being a nuisance to the network, the client is currently hard-coded to
+connect to testnet.
 
 ## Compiling
 
@@ -22,7 +31,8 @@ $ git submodule init
 $ git submodule update
 ```
 
-To build `spv`, you'll need autoconf, automake, and a recent (C++14) compiler:
+To build `spv`, you'll need autoconf, automake, and a bleeding-edge C++17
+compiler:
 
 ```bash
 $ ./autogen.sh
