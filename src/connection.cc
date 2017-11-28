@@ -24,7 +24,7 @@
 
 #define PULL_MSG(cmd)                                 \
   cmd.headers = hdrs;                                 \
-  if (dec.pull_##cmd(cmd)) {                          \
+  if (dec.pull(cmd)) {                                \
     if (dec.validate_msg(cmd)) {                      \
       ok = true;                                      \
       log->info("successfully parsed command " #cmd); \
@@ -59,7 +59,7 @@ bool Connection::read_message() {
   Headers hdrs;
   {
     Decoder dec(buf_.data(), HEADER_SIZE);
-    dec.pull_headers(hdrs);
+    assert(dec.pull(hdrs));
   }
 
   // do we have enough data for the payload?

@@ -50,43 +50,140 @@ class Decoder {
     return false;
   }
 
-  bool pull(char *out, size_t sz) {
-    if (sz + off_ > cap_) {
-      decoder_log->debug("failed to pull {} bytes, offset = {}, capacity = {}",
-                         sz, off_, cap_);
-      return false;
-    }
-    memmove(out, data_ + off_, sz);
-    off_ += sz;
-    return true;
-  }
-
-  bool pull(uint8_t &out) {
-    return pull(reinterpret_cast<char *>(&out), sizeof out);
-  }
+  bool pull(uint8_t &out) { return pull(&out, sizeof out); }
 
   bool pull(uint16_t &out) {
-    bool ok = pull(reinterpret_cast<char *>(&out), sizeof out);
+    bool ok = pull(&out, sizeof out);
     out = le16toh(out);
     return ok;
   }
 
   bool pull(uint32_t &out) {
-    bool ok = pull(reinterpret_cast<char *>(&out), sizeof out);
+    bool ok = pull(&out, sizeof out);
     out = le32toh(out);
     return ok;
   }
 
   bool pull(uint64_t &out) {
-    bool ok = pull(reinterpret_cast<char *>(&out), sizeof out);
+    bool ok = pull(&out, sizeof out);
     out = le64toh(out);
     return ok;
   }
 
   bool pull_be(uint16_t &out) {
-    bool ok = pull(reinterpret_cast<char *>(&out), sizeof out);
+    bool ok = pull(&out, sizeof out);
     out = be16toh(out);
     return ok;
+  }
+
+  bool pull(std::string &out) {
+    uint64_t sz;
+    CHECK(pull_varint(sz));
+    assert(sz <= std::numeric_limits<uint16_t>::max());
+    out.append(data(), sz);
+    off_ += sz;
+    return true;
+  }
+
+  bool pull(Headers &headers) {
+    std::array<char, COMMAND_SIZE> cmd_buf{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    PULL(headers.magic);
+    if (headers.magic != TESTNET3_MAGIC) {
+      decoder_log->warn("peer sent wrong magic bytes");
+    }
+    CHECK(pull(cmd_buf.data(), COMMAND_SIZE));
+    assert(cmd_buf[COMMAND_SIZE - 1] == '\0');
+    headers.command = cmd_buf.data();
+    PULL(headers.payload_size);
+    PULL(headers.checksum);
+    return true;
+  }
+
+  bool pull(Addr &addr) {
+    // TODO: need to actually use addr_buf
+    std::array<char, ADDR_SIZE> addr_buf{0, 0, 0, 0, 0, 0, 0, 0,
+                                         0, 0, 0, 0, 0, 0, 0, 0};
+    CHECK(pull(addr_buf.data(), ADDR_SIZE));
+
+    // port is in network byte order
+    uint16_t port;
+    CHECK(pull_be(port));
+    addr.set_port(port);
+    return true;
+  }
+
+  bool pull(VersionNetAddr &addr) {
+    PULL(addr.services);
+    PULL(addr.addr);
+    return true;
+  }
+
+  bool pull(NetAddr &addr) {
+    PULL(addr.time);
+    PULL(addr.services);
+    PULL(addr.addr);
+    return true;
+  }
+
+  bool pull(Ping &msg) {
+    PULL(msg.nonce);
+    return true;
+  }
+
+  bool pull(Pong &msg) {
+    PULL(msg.nonce);
+    return true;
+  }
+
+  bool pull(Version &msg) {
+    PULL(msg.version);
+    PULL(msg.services);
+    PULL(msg.timestamp);
+    PULL(msg.addr_recv);
+    if (msg.version >= 106) {
+      PULL(msg.addr_from);
+      PULL(msg.nonce);
+      PULL(msg.user_agent);
+      PULL(msg.start_height);
+      if (msg.version >= 70001) {
+        PULL(msg.relay);
+      }
+    }
+    return true;
+  }
+
+  bool pull(Verack &msg) { return true; }
+
+  bool validate_msg(const Message &msg) {
+    if (off_ != cap_) {
+      decoder_log->warn("failed to pull enough bytes");
+      return false;
+    }
+    uint32_t cksum = checksum(data_, cap_);
+    if (cksum != msg.headers.checksum) {
+      decoder_log->warn("invalid checksum!");
+      return false;
+    }
+    return true;
+  }
+
+  inline size_t bytes_read() const { return off_; }
+  inline const char *data() const { return data_ + off_; }
+
+ private:
+  const char *data_;
+  size_t cap_;
+  size_t off_;
+
+  bool pull(void *out, size_t sz) {
+    if (sz + off_ > cap_) {
+      decoder_log->debug("failed to pull {} bytes, offset = {}, capacity = {}",
+                         sz, off_, cap_);
+      return false;
+    }
+    std::memmove(out, data_ + off_, sz);
+    off_ += sz;
+    return true;
   }
 
   bool pull_varint(uint64_t &out) {
@@ -115,104 +212,5 @@ class Decoder {
     }
     assert(false);  // not reached
   }
-
-  bool pull_string(std::string &out) {
-    uint64_t sz;
-    CHECK(pull_varint(sz));
-    assert(sz <= std::numeric_limits<uint16_t>::max());
-    out.append(data(), sz);
-    off_ += sz;
-    return true;
-  }
-
-  // Caller *must* check the buffer size
-  void pull_headers(Headers &headers) {
-    std::array<char, COMMAND_SIZE> cmd_buf{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    pull(headers.magic);
-    if (headers.magic != TESTNET3_MAGIC) {
-      decoder_log->warn("peer sent wrong magic bytes");
-    }
-    pull(cmd_buf.data(), COMMAND_SIZE);
-    assert(cmd_buf[COMMAND_SIZE - 1] == '\0');
-    headers.command = cmd_buf.data();
-    pull(headers.payload_size);
-    pull(headers.checksum);
-  }
-
-  bool pull_addr(Addr &addr) {
-    // TODO: need to actually use addr_buf
-    std::array<char, ADDR_SIZE> addr_buf{0, 0, 0, 0, 0, 0, 0, 0,
-                                         0, 0, 0, 0, 0, 0, 0, 0};
-    CHECK(pull(addr_buf.data(), ADDR_SIZE));
-
-    // port is in network byte order
-    uint16_t port;
-    CHECK(pull_be(port));
-    addr.set_port(port);
-    return true;
-  }
-
-  bool pull_netaddr(VersionNetAddr &addr) {
-    PULL(addr.services);
-    CHECK(pull_addr(addr.addr));
-    return true;
-  }
-
-  bool pull_netaddr(NetAddr &addr) {
-    PULL(addr.time);
-    PULL(addr.services);
-    CHECK(pull_addr(addr.addr));
-    return true;
-  }
-
-  bool pull_ping(Ping &msg) {
-    pull(msg.nonce);
-    return true;
-  }
-
-  bool pull_pong(Pong &msg) {
-    pull(msg.nonce);
-    return true;
-  }
-
-  bool pull_version(Version &msg) {
-    PULL(msg.version);
-    PULL(msg.services);
-    PULL(msg.timestamp);
-    CHECK(pull_netaddr(msg.addr_recv));
-    if (msg.version >= 106) {
-      CHECK(pull_netaddr(msg.addr_from));
-      PULL(msg.nonce);
-      CHECK(pull_string(msg.user_agent));
-      PULL(msg.start_height);
-      if (msg.version >= 70001) {
-        CHECK(pull(msg.relay));
-      }
-    }
-    return true;
-  }
-
-  bool pull_verack(Verack &msg) { return true; }
-
-  bool validate_msg(const Message &msg) {
-    if (off_ != cap_) {
-      decoder_log->warn("failed to pull enough bytes");
-      return false;
-    }
-    uint32_t cksum = checksum(data_, cap_);
-    if (cksum != msg.headers.checksum) {
-      decoder_log->warn("invalid checksum!");
-      return false;
-    }
-    return true;
-  }
-
-  inline size_t bytes_read() const { return off_; }
-  inline const char *data() const { return data_ + off_; }
-
- private:
-  const char *data_;
-  size_t cap_;
-  size_t off_;
 };
 }  // namespace spv
