@@ -23,8 +23,8 @@
 #include "./protocol.h"
 
 #define PULL_MSG(cmd)                                 \
-  if (dec.pull_##cmd(msg)) {                          \
-    if (dec.validate_msg(msg)) {                      \
+  if (dec.pull_##cmd(cmd)) {                          \
+    if (dec.validate_msg(cmd)) {                      \
       ok = true;                                      \
       log->info("successfully parsed command " #cmd); \
     } else {                                          \
@@ -73,16 +73,16 @@ bool Connection::read_message() {
   bool ok = false;
   Decoder dec(buf_.data() + HEADER_SIZE, hdrs.payload_size);
   if (command == "version") {
-    Version msg(hdrs);
+    Version version(hdrs);
     PULL_MSG(version);
   } else if (command == "verack") {
-    Verack msg(hdrs);
+    Verack verack(hdrs);
     PULL_MSG(verack);
   } else if (command == "ping") {
-    Ping msg(hdrs);
+    Ping ping(hdrs);
     PULL_MSG(ping);
   } else if (command == "pong") {
-    Pong msg(hdrs);
+    Pong pong(hdrs);
     PULL_MSG(pong);
   }
   buf_.consume(msg_size);
