@@ -38,18 +38,6 @@ class Decoder : public Reader {
   Decoder() = delete;
   Decoder(const char *data, size_t sz) : Reader(data, sz) {}
 
-  bool pull_byte(uint8_t &out) {
-    PULL(out);
-    return true;
-  }
-
-  bool pull_bool(bool &out) {
-    uint8_t byte;
-    CHECK(pull_byte(byte));
-    out = byte;
-    return true;
-  }
-
   bool pull_varint(uint64_t &out) {
     uint8_t prefix;
     PULL(prefix);
@@ -87,10 +75,20 @@ class Decoder : public Reader {
   }
 
   bool pull_headers(Headers &headers) {
-    PULL(headers);
+    char cmd_buf[COMMAND_SIZE];
+    std::memset(&cmd_buf, 0, sizeof cmd_buf);
+    PULL(headers.magic);
     if (headers.magic != TESTNET3_MAGIC) {
       decoder_log->warn("peer sent wrong magic bytes");
     }
+
+    // check that cmd_buf is null terminated before assigning
+    PULL(cmd_buf);
+    assert(cmd_buf[COMMAND_SIZE - 1] == '\0');
+    headers.command = cmd_buf;
+
+    PULL(headers.payload_size);
+    PULL(headers.checksum);
     return true;
   }
 
@@ -118,7 +116,7 @@ class Decoder : public Reader {
       CHECK(pull_string(msg.user_agent));
       PULL(msg.start_height);
       if (msg.version >= 70001) {
-        CHECK(pull_bool(msg.relay));
+        CHECK(pull(msg.relay));
       }
     }
     return true;

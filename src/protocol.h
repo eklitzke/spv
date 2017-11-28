@@ -20,6 +20,8 @@
 #include <cstring>
 #include <string>
 
+#include "./uvw.h"
+
 namespace spv {
 // these must be unsigned, enums are signed
 #define MAINNET_MAGIC 0xD9B4BEF9
@@ -53,14 +55,19 @@ enum {
 
 struct Headers {
   uint32_t magic;
-  char command[12];
+  std::string command;
   uint32_t payload_size;
   uint32_t checksum;
 
-  Headers() { std::memset(this, 0, HEADER_SIZE); }
-  Headers(const Headers &other) { std::memcpy(this, &other, HEADER_SIZE); }
+  Headers() : magic(0), payload_size(0), checksum(0) {}
+  explicit Headers(const std::string &command)
+      : magic(0), command(command), payload_size(0), checksum(0) {}
+  Headers(const Headers &other)
+      : magic(other.magic),
+        command(other.command),
+        payload_size(other.payload_size),
+        checksum(other.checksum) {}
 };
-static_assert(sizeof(Headers) == HEADER_SIZE);
 
 #define VERSION_FIELDS \
   uint64_t services;   \
@@ -88,6 +95,14 @@ struct Message {
   Message(const Headers &hdrs) : headers(hdrs) {}
 };
 
+struct Ping : Message {
+  uint64_t nonce;
+};
+
+struct Pong : Message {
+  uint64_t nonce;
+};
+
 struct Version : Message {
   uint32_t version;
   uint64_t services;
@@ -97,7 +112,7 @@ struct Version : Message {
   uint64_t nonce;
   std::string user_agent;
   uint32_t start_height;
-  bool relay;
+  uint8_t relay;
 
   Version() = delete;
   Version(const Headers &hdrs) : Message(hdrs) {}
