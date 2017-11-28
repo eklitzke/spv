@@ -56,10 +56,13 @@ Addr::Addr(const addrinfo *ai) : af_(ai->ai_family) {
   uvw_addr_.ip = buf;
 }
 
-void Addr::fill_addr_buf(std::array<char, 16> &buf) const {
+const static std::array<uint8_t, 12> ipv4_prefix = {0, 0, 0, 0, 0,    0,
+                                                    0, 0, 0, 0, 0xff, 0xff};
+
+void Addr::encode_addrbuf(addrbuf_t &buf) const {
   switch (af_) {
     case AF_INET:
-      std::memset(buf.data(), 0, 12);
+      std::memmove(buf.data(), ipv4_prefix.data(), 12);
       std::memmove(buf.data() + 12, &addr_.ipv4.s_addr, 4);
       return;
     case AF_INET6:
@@ -67,6 +70,25 @@ void Addr::fill_addr_buf(std::array<char, 16> &buf) const {
       return;
   }
   assert(false);  // not reached
+}
+
+void Addr::set_addr(const addrbuf_t &buf) {
+  // apply a basic heuristic to detect ipv4 messages
+  const void *src;
+  if (std::memcmp(buf.data(), ipv4_prefix.data(), 12) == 0) {
+    af_ = AF_INET;
+    src = buf.data() + 12;
+  } else {
+    af_ = AF_INET6;
+    src = buf.data();
+  }
+  char string_buf[INET6_ADDRSTRLEN];
+  const char *s = inet_ntop(af_, src, string_buf, sizeof string_buf);
+  if (s == nullptr) {
+    log->warn("failed to decode addr: {}", strerror(errno));
+    return;
+  }
+  uvw_addr_.ip = s;
 }
 }  // namespace spv
 

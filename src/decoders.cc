@@ -162,9 +162,9 @@ struct Decoder {
 
   void pull(Addr &addr) {
     // TODO: need to actually use addr_buf
-    std::array<char, ADDR_SIZE> addr_buf{0, 0, 0, 0, 0, 0, 0, 0,
-                                         0, 0, 0, 0, 0, 0, 0, 0};
+    addrbuf_t addr_buf{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     pull_buf(addr_buf.data(), ADDR_SIZE);
+    addr.set_addr(addr_buf);
 
     // port is in network byte order
     uint16_t port;

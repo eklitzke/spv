@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <cstring>
 #include <string>
@@ -25,6 +26,9 @@
 #include "./util.h"
 
 namespace spv {
+
+typedef std::array<uint8_t, 16> addrbuf_t;
+
 // these must be unsigned, enums may be signed
 inline uint32_t MAINNET_MAGIC = 0xD9B4BEF9;
 inline uint32_t TESTNET_MAGIC = 0xDAB5BFFA;

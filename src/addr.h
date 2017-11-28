@@ -26,6 +26,8 @@
 #include "./uvw.h"
 
 namespace spv {
+typedef std::array<uint8_t, 16> addrbuf_t;
+
 union inaddr {
   in_addr ipv4;
   in6_addr ipv6;
@@ -33,7 +35,7 @@ union inaddr {
 
 class Addr {
  public:
-  Addr() : af_(AF_INET) {}  // TODO: this is bad
+  Addr() : af_(AF_INET) {}  // FIXME: this is bad
   Addr(const Addr& other) : af_(other.af_), addr_(other.addr_) {
     uvw_addr_.ip = other.uvw_addr_.ip;
     uvw_addr_.port = other.uvw_addr_.port;
@@ -46,14 +48,13 @@ class Addr {
   inline uint16_t port() const { return static_cast<uint16_t>(uvw_addr_.port); }
   inline const uvw::Addr& uvw_addr() const { return uvw_addr_; }
 
-  inline void set_addr_family(int af) { af_ = af; }
+  void set_addr(const addrbuf_t& buf);
   inline void set_port(uint16_t port) {
     // caller must make sure to set this in host order
     uvw_addr_.port = port;
   }
 
-  // must have 16 bytes of storage space
-  void fill_addr_buf(std::array<char, 16>& buf) const;
+  void encode_addrbuf(addrbuf_t& buf) const;
 
   inline bool operator==(const Addr& other) const {
     return af_ == other.af_ && uvw_addr_ == other.uvw_addr_;

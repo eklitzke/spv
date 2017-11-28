@@ -80,8 +80,8 @@ struct Encoder : Buffer {
   }
 
   void push(const Addr &addr) {
-    std::array<char, ADDR_SIZE> buf;
-    addr.fill_addr_buf(buf);
+    addrbuf_t buf;
+    addr.encode_addrbuf(buf);
     append(buf.data(), ADDR_SIZE);
     push_be(addr.port());
   }
