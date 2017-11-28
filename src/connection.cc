@@ -22,17 +22,17 @@
 #include "./logging.h"
 #include "./protocol.h"
 
-#define PULL_MSG(cmd)                                 \
-  cmd.headers = hdrs;                                 \
-  if (dec.pull(cmd)) {                                \
-    if (dec.validate_msg(cmd)) {                      \
-      ok = true;                                      \
-      log->info("successfully parsed command " #cmd); \
-    } else {                                          \
-      log->warn("failed to checksum command " #cmd);  \
-    }                                                 \
-  } else {                                            \
-    log->warn("failed to parse command " #cmd);       \
+#define PULL_MSG(cmd)                                     \
+  cmd.headers = hdrs;                                     \
+  if (dec.pull(cmd)) {                                    \
+    if (dec.validate_msg(cmd)) {                          \
+      ok = true;                                          \
+      log->info("parsed command '" #cmd "'");             \
+    } else {                                              \
+      log->warn("failed to checksum command '" #cmd "'"); \
+    }                                                     \
+  } else {                                                \
+    log->warn("failed to parse command " #cmd "'");       \
   }
 
 namespace spv {
@@ -96,6 +96,8 @@ bool Connection::read_message() {
   } else if (command == "pong") {
     Pong pong;
     PULL_MSG(pong);
+  } else {
+    log->warn("ignoring unknown command '{}' from peer {}", command, addr_);
   }
   buf_.consume(msg_size);
   return true;
