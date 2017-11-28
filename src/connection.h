@@ -56,15 +56,14 @@ class Connection {
 
  private:
   Addr addr_;
-  Buffer read_buf_;
+  Buffer buf_;
   std::shared_ptr<uvw::TcpHandle> tcp_;
 
   uint64_t our_nonce_, their_nonce_;
   uint64_t our_services_, their_services_;
 
-  inline void consume(const Decoder& dec) {
-    read_buf_.consume(dec.bytes_read());
-  }
+  // returns true if a message was actually read
+  bool read_message();
 };
 }  // namespace spv
 

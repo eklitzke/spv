@@ -22,6 +22,18 @@
 #include "./logging.h"
 #include "./protocol.h"
 
+#define PULL_MSG(cmd)                                 \
+  if (dec.pull_##cmd(msg)) {                          \
+    if (dec.validate_msg(msg)) {                      \
+      ok = true;                                      \
+      log->info("successfully parsed command " #cmd); \
+    } else {                                          \
+      log->warn("failed to checksum command " #cmd);  \
+    }                                                 \
+  } else {                                            \
+    log->warn("failed to parse command " #cmd);       \
+  }
+
 namespace spv {
 MODULE_LOGGER
 
@@ -32,40 +44,49 @@ void Connection::connect() {
 
 void Connection::read(const char* data, size_t sz) {
   log->debug("read {} bytes from peer {}", sz, addr_);
-  read_buf_.append(data, sz);
+  buf_.append(data, sz);
+  for (bool ok = true; ok; ok = read_message())
+    ;
+}
 
-  Decoder dec(read_buf_.data(), read_buf_.size());
-  Headers hdrs;
-  assert(dec.pull_headers(hdrs));
-
-  std::string command = hdrs.command;
-  log->debug("peer {} sent command: {}", addr_, command);
-  if (command == "version") {
-    Version ver(hdrs);
-    if (dec.pull_version(ver)) {
-      consume(dec);
-      log->info("peer sent us version {}, agent = {}", ver.version,
-                ver.user_agent);
-    }
-  } else if (command == "verack") {
-    Verack ack(hdrs);
-    if (dec.pull_verack(ack)) {
-      consume(dec);
-      log->info("peer sent us verack message");
-    }
-  } else if (command == "ping") {
-    Ping ping(hdrs);
-    if (dec.pull_ping(ping)) {
-      consume(dec);
-      log->info("peer sent us ping message");
-    }
-  } else if (command == "pong") {
-    Pong pong(hdrs);
-    if (dec.pull_pong(pong)) {
-      consume(dec);
-      log->info("peer sent us pong message");
-    }
+bool Connection::read_message() {
+  if (buf_.size() < HEADER_SIZE) {
+    return false;
   }
+
+  // get the headers
+  Headers hdrs;
+  {
+    Decoder dec(buf_.data(), HEADER_SIZE);
+    dec.pull_headers(hdrs);
+  }
+
+  // do we have enough data for the payload?
+  size_t msg_size = HEADER_SIZE + hdrs.payload_size;
+  if (buf_.size() < msg_size) {
+    return false;
+  }
+
+  const std::string command = hdrs.command;
+  log->debug("peer {} sent command: {}", addr_, command);
+
+  bool ok = false;
+  Decoder dec(buf_.data() + HEADER_SIZE, hdrs.payload_size);
+  if (command == "version") {
+    Version msg(hdrs);
+    PULL_MSG(version);
+  } else if (command == "verack") {
+    Verack msg(hdrs);
+    PULL_MSG(verack);
+  } else if (command == "ping") {
+    Ping msg(hdrs);
+    PULL_MSG(ping);
+  } else if (command == "pong") {
+    Pong msg(hdrs);
+    PULL_MSG(pong);
+  }
+  buf_.consume(msg_size);
+  return true;
 }
 
 void Connection::send_version(uint64_t nonce, uint64_t services) {

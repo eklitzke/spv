@@ -19,6 +19,7 @@
 #include <endian.h>
 #include <limits>
 
+#include "./buffer.h"
 #include "./logging.h"
 #include "./pow.h"
 #include "./protocol.h"
@@ -27,11 +28,6 @@
   if (!(x)) {     \
     return false; \
   }
-
-#define CHECK_PRE assert(off_ == HEADER_SIZE)
-#define CHECK_POST           \
-  CHECK(check_checksum(msg)) \
-  return true;
 
 #define PULL(x) CHECK(pull(x))
 
@@ -42,6 +38,14 @@ class Decoder {
  public:
   Decoder() = delete;
   Decoder(const char *data, size_t sz) : data_(data), cap_(sz), off_(0) {}
+
+  inline bool replace(size_t cap) {
+    if (cap <= cap_ && cap <= off_) {
+      cap_ = cap;
+      return true;
+    }
+    return false;
+  }
 
   inline bool pull(char *out, size_t sz) {
     if (sz + off_ > cap_) {
@@ -95,22 +99,19 @@ class Decoder {
     return true;
   }
 
-  bool pull_headers(Headers &headers) {
+  // Caller *must* check the buffer size
+  void pull_headers(Headers &headers) {
     char cmd_buf[COMMAND_SIZE];
     std::memset(&cmd_buf, 0, sizeof cmd_buf);
-    PULL(headers.magic);
+    pull(headers.magic);
     if (headers.magic != TESTNET3_MAGIC) {
       decoder_log->warn("peer sent wrong magic bytes");
     }
-
-    // check that cmd_buf is null terminated before assigning
-    PULL(cmd_buf);
+    pull(cmd_buf);
     assert(cmd_buf[COMMAND_SIZE - 1] == '\0');
     headers.command = cmd_buf;
-
-    PULL(headers.payload_size);
-    PULL(headers.checksum);
-    return true;
+    pull(headers.payload_size);
+    pull(headers.checksum);
   }
 
   bool pull_netaddr(VersionNetAddr &addr) {
@@ -131,19 +132,16 @@ class Decoder {
   }
 
   bool pull_ping(Ping &msg) {
-    CHECK_PRE;
-    PULL(msg.nonce);
-    CHECK_POST;
+    pull(msg.nonce);
+    return true;
   }
 
   bool pull_pong(Pong &msg) {
-    CHECK_PRE;
-    PULL(msg.nonce);
-    CHECK_POST;
+    pull(msg.nonce);
+    return true;
   }
 
   bool pull_version(Version &msg) {
-    CHECK_PRE;
     PULL(msg.version);
     PULL(msg.services);
     PULL(msg.timestamp);
@@ -157,12 +155,22 @@ class Decoder {
         CHECK(pull(msg.relay));
       }
     }
-    CHECK_POST;
+    return true;
   }
 
-  bool pull_verack(Verack &msg) {
-    CHECK_PRE;
-    CHECK_POST;
+  bool pull_verack(Verack &msg) { return true; }
+
+  bool validate_msg(const Message &msg) {
+    if (off_ != cap_) {
+      decoder_log->warn("failed to pull enough bytes");
+      return false;
+    }
+    uint32_t cksum = checksum(data_, cap_);
+    if (cksum != msg.headers.checksum) {
+      decoder_log->warn("invalid checksum!");
+      return false;
+    }
+    return true;
   }
 
   inline size_t bytes_read() const { return off_; }
@@ -172,14 +180,5 @@ class Decoder {
   const char *data_;
   size_t cap_;
   size_t off_;
-
-  inline bool check_checksum(const Message &msg) {
-    uint32_t cksum = checksum(data_ + HEADER_SIZE, off_ - HEADER_SIZE);
-    if (cksum != msg.headers.checksum) {
-      decoder_log->warn("invalid checksum!");
-      return false;
-    }
-    return true;
-  }
 };
 }  // namespace spv
