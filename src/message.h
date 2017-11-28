@@ -76,7 +76,8 @@ struct Message {
 struct AddrMsg : Message {
   std::vector<NetAddr> addrs;
 
-  AddrMsg() : Message("addr") {}
+  AddrMsg() : AddrMsg(Headers("addr")) {}
+  explicit AddrMsg(const Headers &hdrs) : Message(hdrs) {}
   FINAL_ENCODE
 };
 

@@ -52,7 +52,12 @@ bool Connection::read_message() {
   if (msg.get() != nullptr) {
     const std::string& cmd = msg->headers.command;
     log->info("got message '{}' from peer {}", cmd, peer_);
-    if (cmd == "version") {
+    if (cmd == "addr") {
+      AddrMsg* addrs = dynamic_cast<AddrMsg*>(msg.get());
+      for (const auto& addr : addrs->addrs) {
+        log->debug("peer sent us new addr {}", addr.addr);
+      }
+    } else if (cmd == "version") {
       Version* ver = dynamic_cast<Version*>(msg.get());
       peer_.nonce = ver->nonce;
       peer_.services = ver->services;

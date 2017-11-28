@@ -222,6 +222,24 @@ struct MessageParser {
 #define DECLARE_PARSER(cmd, callback) \
   static MessageParser cmd##_parser(#cmd, callback);
 
+DECLARE_PARSER(addr, [](auto &dec, const auto &hdrs) {
+  auto msg = std::make_unique<AddrMsg>(hdrs);
+  uint64_t count;
+  dec.pull_varint(count);
+  if (count > 1000) {
+    std::ostringstream os;
+    os << "addr coutn " << count << " is too large, ignoring";
+    throw BadMessage(os.str());
+  }
+  log->debug("peer is sending us {} addr(s)", count);
+  for (size_t i = 0; i < count; i++) {
+    NetAddr addr;
+    dec.pull(addr);
+    msg->addrs.push_back(addr);
+  }
+  return msg;
+});
+
 DECLARE_PARSER(ping, [](auto &dec, const auto &hdrs) {
   auto msg = std::make_unique<Ping>(hdrs);
   dec.pull(msg->nonce);

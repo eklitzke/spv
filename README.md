@@ -12,15 +12,9 @@ useful as a reference. I would also recommend taking a look at
 ## Status
 
 This code is considered **alpha** and incomplete. The client can connect to the
-peers via the DNS seed list, and send/receive the following message types:
-
- - ping
- - pong
- - version
- - verack
-
-To avoid being a nuisance to the network, the client is currently hard-coded to
-connect to testnet.
+peers via the DNS seed list, and send/receive a small subset of the p2p message
+types. To avoid being a nuisance to the network, the client is currently
+hard-coded to connect to testnet.
 
 ## Compiling
 

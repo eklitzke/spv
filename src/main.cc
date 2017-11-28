@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
       {"version", no_argument, 0, 'v'},
       {0, 0, 0, 0}};
 
-  size_t max_connections = 2;
+  size_t max_connections = 4;
   for (;;) {
     int c = getopt_long(argc, argv, short_opts, long_opts, nullptr);
     if (c == -1) {
