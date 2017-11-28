@@ -79,7 +79,7 @@ class Decoder {
   bool pull(std::string &out) {
     uint64_t sz;
     CHECK(pull_varint(sz));
-    assert(sz <= std::numeric_limits<uint16_t>::max());
+    CHECK(sz <= std::numeric_limits<uint16_t>::max());
     out.append(data(), sz);
     off_ += sz;
     return true;
@@ -92,7 +92,7 @@ class Decoder {
       decoder_log->warn("peer sent wrong magic bytes");
     }
     CHECK(pull(cmd_buf.data(), COMMAND_SIZE));
-    assert(cmd_buf[COMMAND_SIZE - 1] == '\0');
+    CHECK(cmd_buf[COMMAND_SIZE - 1] == '\0');
     headers.command = cmd_buf.data();
     PULL(headers.payload_size);
     PULL(headers.checksum);
@@ -210,7 +210,7 @@ class Decoder {
         PULL(out);
         return true;
     }
-    assert(false);  // not reached
+    return false;  // not reached
   }
 };
 }  // namespace spv
