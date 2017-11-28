@@ -33,25 +33,32 @@ class Reader {
 
   inline bool pull(char* out, size_t sz) {
     if (sz + off_ > cap_) {
-      reader_log->warn("failed to pull {} bytes", sz);
+      reader_log->warn("failed to pull {} bytes, offset = {}, capacity = {}",
+                       sz, off_, cap_);
       return false;
     }
     memmove(out, data_ + off_, sz);
-    off_ += sz;
+    advance(sz);
     return true;
   }
 
   template <typename T>
-  inline bool pull(T& out) {
-    return pull(reinterpret_cast<char*>(&out), sizeof(T));
+  inline bool pull(T& out, size_t sz = 0) {
+    return pull(reinterpret_cast<char*>(&out), sz == 0 ? sizeof(T) : sz);
   }
 
-  // the "size" of bytes read, which internally we call the offset
-  inline size_t size() const { return off_; }
+  inline size_t bytes_read() const { return off_; }
+
+  inline const char* data() const { return data_ + off_; }
+  inline size_t capacity() const { return cap_; }
+  inline size_t offset() const { return off_; }
 
  private:
   const char* data_;
   size_t cap_;
   size_t off_;
+
+ protected:
+  inline void advance(size_t sz) { off_ += sz; }
 };
 }  // namespace spv

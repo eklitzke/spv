@@ -37,7 +37,20 @@ void Connection::read(const char* data, size_t sz) {
   Decoder dec(read_buf_.data(), read_buf_.size());
   Headers hdrs;
   assert(dec.pull_headers(hdrs));
-  log->debug("hdrs have length {}", hdrs.payload_size);
+
+  std::string command = hdrs.command;
+  log->debug("peer {} sent command: {}", addr_, command);
+  if (command == "version") {
+    Version ver(hdrs);
+    if (dec.pull_version(ver)) {
+      read_buf_.consume(dec.bytes_read());
+      log->info("peer sent us version {}, agent = {}", ver.version,
+                ver.user_agent);
+    }
+  } else if (command == "verack") {
+    Verack ack(hdrs);
+    log->info("peer sent us verack message");
+  }
 }
 
 void Connection::send_version(uint64_t nonce, uint64_t services) {

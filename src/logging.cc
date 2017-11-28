@@ -21,4 +21,5 @@
 
 namespace spv {
 DEFINE_LOGGER(reader, "reader.h")
+DEFINE_LOGGER(decoder, "decoder.h")
 }  // namespace spv

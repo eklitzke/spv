@@ -17,23 +17,111 @@
 #pragma once
 
 #include <endian.h>
+#include <limits>
 
 #include "./protocol.h"
 #include "./reader.h"
 
+#define CHECK(x)  \
+  if (!(x)) {     \
+    return false; \
+  }
+
+#define PULL(x) CHECK(pull(x))
+#define PULL_SZ(x, sz) CHECK(pull(x, sz))
+
 namespace spv {
-class Decoder {
+EXTERN_LOGGER(decoder)
+
+class Decoder : public Reader {
  public:
   Decoder() = delete;
-  Decoder(const char *data, size_t sz) : rd_(data, sz) {}
+  Decoder(const char *data, size_t sz) : Reader(data, sz) {}
 
-  bool pull_headers(Headers &headers) {
-    if (!rd_.pull(headers)) return false;
-    headers.payload_size = le32toh(headers.payload_size);
+  bool pull_byte(uint8_t &out) {
+    PULL(out);
     return true;
   }
 
- private:
-  Reader rd_;
+  bool pull_bool(bool &out) {
+    uint8_t byte;
+    CHECK(pull_byte(byte));
+    out = byte;
+    return true;
+  }
+
+  bool pull_varint(uint64_t &out) {
+    uint8_t prefix;
+    PULL(prefix);
+    if (prefix < 0xfd) {
+      out = prefix;
+      return true;
+    }
+    switch (prefix) {
+      case 0xfd: {
+        uint16_t val;
+        PULL(val);
+        out = val;
+        return true;
+      }
+      case 0xfe: {
+        uint32_t val;
+        PULL(val);
+        out = val;
+        return true;
+      }
+      case 0xff:
+        PULL(out);
+        return true;
+    }
+    assert(false);  // not reached
+  }
+
+  bool pull_string(std::string &out) {
+    uint64_t sz;
+    CHECK(pull_varint(sz));
+    assert(sz <= std::numeric_limits<uint16_t>::max());
+    out.append(data(), sz);
+    advance(sz);
+    return true;
+  }
+
+  bool pull_headers(Headers &headers) {
+    PULL(headers);
+    if (headers.magic != TESTNET3_MAGIC) {
+      decoder_log->warn("peer sent wrong magic bytes");
+    }
+    return true;
+  }
+
+  bool pull_netaddr(VersionNetAddr &addr) {
+    PULL_SZ(addr, VERSION_NETADDR_SIZE);
+    addr.port = be16toh(addr.port);  // TODO: convert ip as well
+    return true;
+  }
+
+  bool pull_netaddr(NetAddr &addr) {
+    PULL_SZ(addr, NETADDR_SIZE);
+    addr.port = be16toh(addr.port);  // TODO: convert ip as well
+    return true;
+  }
+
+  bool pull_version(Version &msg) {
+    assert(offset() == HEADER_SIZE);
+    PULL(msg.version);
+    PULL(msg.services);
+    PULL(msg.timestamp);
+    CHECK(pull_netaddr(msg.addr_recv));
+    if (msg.version >= 106) {
+      CHECK(pull_netaddr(msg.addr_from));
+      PULL(msg.nonce);
+      CHECK(pull_string(msg.user_agent));
+      PULL(msg.start_height);
+      if (msg.version >= 70001) {
+        CHECK(pull_bool(msg.relay));
+      }
+    }
+    return true;
+  }
 };
 }  // namespace spv

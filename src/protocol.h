@@ -17,6 +17,8 @@
 #pragma once
 
 #include <cstdint>
+#include <cstring>
+#include <string>
 
 namespace spv {
 // these must be unsigned, enums are signed
@@ -38,14 +40,6 @@ enum {
   HEADER_CHECKSUM_OFFSET = 20,
 };
 
-struct Headers {
-  uint32_t magic;
-  char command[12];
-  uint32_t payload_size;
-  uint32_t checksum;
-};
-static_assert(sizeof(Headers) == HEADER_SIZE);
-
 // netaddr constants
 enum {
   ADDR_SIZE = 16,
@@ -55,5 +49,62 @@ enum {
 // constants related to version messages
 enum {
   COMMAND_SIZE = 12,
+};
+
+struct Headers {
+  uint32_t magic;
+  char command[12];
+  uint32_t payload_size;
+  uint32_t checksum;
+
+  Headers() { std::memset(this, 0, HEADER_SIZE); }
+  Headers(const Headers &other) { std::memcpy(this, &other, HEADER_SIZE); }
+};
+static_assert(sizeof(Headers) == HEADER_SIZE);
+
+#define VERSION_FIELDS \
+  uint64_t services;   \
+  char addr[16];       \
+  uint16_t port;
+
+struct VersionNetAddr {
+  VERSION_FIELDS
+};
+
+struct NetAddr {
+  uint32_t time;
+  VERSION_FIELDS
+};
+
+enum {
+  VERSION_NETADDR_SIZE = 26,
+  NETADDR_SIZE = 30,
+};
+
+struct Message {
+  Headers headers;
+
+  Message() = delete;
+  Message(const Headers &hdrs) : headers(hdrs) {}
+};
+
+struct Version : Message {
+  uint32_t version;
+  uint64_t services;
+  uint64_t timestamp;
+  VersionNetAddr addr_recv;
+  VersionNetAddr addr_from;
+  uint64_t nonce;
+  std::string user_agent;
+  uint32_t start_height;
+  bool relay;
+
+  Version() = delete;
+  Version(const Headers &hdrs) : Message(hdrs) {}
+};
+
+struct Verack : Message {
+  Verack() = delete;
+  Verack(const Headers &hdrs) : Message(hdrs) {}
 };
 }  // namespace spv

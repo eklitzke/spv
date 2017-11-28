@@ -75,6 +75,12 @@ class Buffer {
     return std::move(data_);
   }
 
+  void consume(size_t sz) {
+    assert(size_ >= sz);
+    std::memcpy(data_.get(), data_.get() + sz, size_ - sz);
+    size_ -= sz;
+  }
+
  private:
   size_t capacity_;
   size_t size_;
