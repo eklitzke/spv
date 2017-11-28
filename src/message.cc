@@ -291,15 +291,6 @@ struct Decoder {
     pull(addr.services);
     pull(addr.addr);
   }
-
-  void pull(Ping &msg) { pull(msg.nonce); }
-
-  void pull(Pong &msg) { pull(msg.nonce); }
-
-  // TODO: for this message only, it's OK if there is extra data at the end
-  void pull(Version *msg) {}
-
-  void pull(Verack &msg) {}
 };
 
 static std::unique_ptr<Message> internal_decode_message(
@@ -344,7 +335,7 @@ static std::unique_ptr<Message> internal_decode_message(
       }
     }
   } else if (cmd == "verack") {
-    result.reset(new Verack(hdrs));
+    result.reset(new VerAck(hdrs));
   } else if (cmd == "ping") {
     result.reset(new Ping(hdrs));
     Ping *msg = dynamic_cast<Ping *>(result.get());
@@ -353,6 +344,8 @@ static std::unique_ptr<Message> internal_decode_message(
     result.reset(new Pong(hdrs));
     Pong *msg = dynamic_cast<Pong *>(result.get());
     dec.pull(msg->nonce);
+  } else if (cmd == "sendheaders") {
+    result.reset(new SendHeaders(hdrs));
   } else {
     throw UnknownMessage(cmd);
   }
@@ -399,7 +392,13 @@ DECLARE_ENCODE(Pong) {
   return enc.serialize(sz);
 }
 
-DECLARE_ENCODE(Verack) {
+DECLARE_ENCODE(SendHeaders) {
+  Encoder enc;
+  enc.push(headers);
+  return enc.serialize(sz);
+}
+
+DECLARE_ENCODE(VerAck) {
   Encoder enc;
   enc.push(headers);
   return enc.serialize(sz);

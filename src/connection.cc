@@ -59,16 +59,18 @@ bool Connection::read_message() {
       peer_.user_agent = ver->user_agent;
       peer_.version = ver->version;
       log->info("finished handshake with peer {}", peer_);
-      send_msg(Verack{});
+      send_msg(VerAck{});
     } else if (cmd == "verack") {
-      // no-op
+      log->debug("ignoring verack");
     } else if (cmd == "ping") {
       Ping* ping = dynamic_cast<Ping*>(msg.get());
       Pong pong;
       pong.nonce = ping->nonce;
       send_msg(pong);
     } else if (cmd == "pong") {
-      // no-op
+      log->debug("ignoring pong");
+    } else if (cmd == "sendheaders") {
+      log->debug("ignoring sendheaders");
     } else {
       // not reached, decoder should have the logic to check for this
       log->error("decoder returned unknown p2p message '{}'", cmd);

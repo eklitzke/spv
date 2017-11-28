@@ -96,6 +96,12 @@ struct Pong : Message {
   FINAL_ENCODE
 };
 
+struct SendHeaders : Message {
+  SendHeaders() : SendHeaders(Headers("sendheaders")) {}
+  explicit SendHeaders(const Headers &hdrs) : Message(hdrs) {}
+  FINAL_ENCODE
+};
+
 struct Version : Message {
   uint32_t version;
   uint64_t services;
@@ -119,9 +125,9 @@ struct Version : Message {
   FINAL_ENCODE
 };
 
-struct Verack : Message {
-  Verack() : Verack(Headers("verack")) {}
-  explicit Verack(const Headers &hdrs) : Message(hdrs) {}
+struct VerAck : Message {
+  VerAck() : VerAck(Headers("verack")) {}
+  explicit VerAck(const Headers &hdrs) : Message(hdrs) {}
   FINAL_ENCODE
 };
 
