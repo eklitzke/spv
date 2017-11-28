@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <ctime>
 #include <random>
 #include <string>
 
@@ -29,6 +30,16 @@ std::string string_to_hex(const std::string& input);
 
 // generate a random uint64_t value
 uint64_t rand64();
+
+inline uint32_t time32() {
+  time_t tv = time(nullptr);
+  return static_cast<uint32_t>(tv);
+}
+
+inline uint64_t time64() {
+  time_t tv = time(nullptr);
+  return static_cast<uint64_t>(tv);
+}
 
 template <typename T>
 void shuffle(T& iterable) {

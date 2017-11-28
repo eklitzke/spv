@@ -16,96 +16,137 @@
 
 #include "./encoder.h"
 
-#include <array>
+#include <endian.h>
 
+#include <array>
+#include <cstddef>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <string>
+
+#include "./addr.h"
+#include "./buffer.h"
 #include "./logging.h"
 #include "./pow.h"
 
 namespace spv {
 MODULE_LOGGER
-template <>
-void Encoder::push_int(uint16_t val) {
-  val = htole16(val);
-  append(&val, sizeof val);
-}
 
-template <>
-void Encoder::push_int(uint32_t val) {
-  val = htole32(val);
-  append(&val, sizeof val);
-}
+// Encoder can encode data.
+class Encoder : public Buffer {
+ public:
+  Encoder() : Buffer() {}
 
-template <>
-void Encoder::push_int(uint64_t val) {
-  val = htole64(val);
-  append(&val, sizeof val);
-}
-
-void Encoder::push_varint(size_t val) {
-  if (val < 0xfd) {
-    push_byte(val);
-    return;
-  } else if (val <= 0xffff) {
-    push_byte(0xfd);
-    push_int<uint16_t>(val);
-    return;
-  } else if (val <= 0xffffffff) {
-    push_byte(0xfe);
-    push_int<uint32_t>(val);
-    return;
-  }
-  push_byte(0xff);
-  push_int<uint64_t>(val);
-}
-
-void Encoder::push_netaddr(const Addr *addr, uint64_t services,
-                           bool include_time) {
-  if (include_time) {
-    push_time<uint32_t>();
-  }
-  push_int<uint64_t>(services);
-
-  if (addr == nullptr) {
-    append_zeros(ADDR_SIZE + PORT_SIZE);
-    return;
+  template <typename T>
+  void push_int(T val) {
+    push(val);
   }
 
-  const int af = addr->af();
-  switch (af) {
-    case AF_INET:
-      push_ipv4(addr->ipv4());
-      break;
-    case AF_INET6:
-      push_ipv6(addr->ipv6());
-      break;
-    default:
-      log->error("unknown address family {}", af);
+  void push(uint8_t val) { append(&val, sizeof val); }
+
+  void push_zeros(size_t count) {}
+
+  void push(uint16_t val) {
+    uint16_t enc_val = htole16(val);
+    append(&enc_val, sizeof enc_val);
+  }
+
+  void push(uint32_t val) {
+    uint32_t enc_val = htole32(val);
+    append(&enc_val, sizeof enc_val);
+  }
+
+  void push(uint64_t val) {
+    uint64_t enc_val = htole64(val);
+    append(&enc_val, sizeof enc_val);
+  }
+
+  void push(const Headers &headers) {
+    push(headers.magic);
+    append_string(headers.command, COMMAND_SIZE);
+    push(headers.payload_size);
+    push(headers.checksum);
+  }
+
+  // push in network byte order
+  void push_be(uint16_t val) {
+    uint16_t enc_val = htobe16(val);
+    append(&enc_val, sizeof enc_val);
+  }
+
+  void push(const Addr &addr) {
+    std::array<char, ADDR_SIZE> buf;
+    addr.fill_addr_buf(buf);
+    append(buf.data(), ADDR_SIZE);
+    push_be(addr.port());
+  }
+
+  void push(const VersionNetAddr &addr) {
+    push(addr.services);
+    push(addr.addr);
+  }
+
+  void push(const NetAddr &addr) {
+    push(addr.time);
+    push(addr.services);
+    push(addr.addr);
+  }
+
+  void push_varint(size_t val) {
+    if (val < 0xfd) {
+      push_int<uint8_t>(val);
       return;
+    } else if (val <= 0xffff) {
+      push_int<uint8_t>(0xfd);
+      push_int<uint16_t>(val);
+      return;
+    } else if (val <= 0xffffffff) {
+      push_int<uint8_t>(0xfe);
+      push_int<uint32_t>(val);
+      return;
+    }
+    push_int<uint8_t>(0xff);
+    push_int<uint64_t>(val);
   }
-  push_port(addr->port());
-}
 
-void Encoder::push_headers(const std::string &command, uint32_t magic) {
-  assert(size() == 0);
-  push_int<uint32_t>(magic);
-  append_string(command, COMMAND_SIZE);
-  assert(size() == HEADER_LEN_OFFSET);
+  void push(const std::string &s) {
+    push_varint(s.size());
+    append(s.c_str(), s.size());
+  }
 
-  // reserve space for len + checksum
-  append_zeros(HEADER_SIZE - HEADER_LEN_OFFSET);
+  void finish_headers() {
+    // insert the length
+    uint32_t len = htole32(size() - HEADER_SIZE);
+    insert(&len, sizeof len, HEADER_LEN_OFFSET);
 
-  assert(size() == HEADER_SIZE);
-}
+    // insert the checksum
+    std::array<char, 4> cksum{0, 0, 0, 0};
+    checksum(data() + HEADER_SIZE, size() - HEADER_SIZE, cksum);
+    insert(&cksum, sizeof cksum, HEADER_CHECKSUM_OFFSET);
+  }
 
-void Encoder::finish_headers() {
-  // insert the length
-  uint32_t len = htole32(size() - HEADER_SIZE);
-  insert(&len, sizeof len, HEADER_LEN_OFFSET);
+  std::unique_ptr<char[]> serialize(size_t *sz, bool finish = true) {
+    if (finish) finish_headers();
+    return move_buffer(sz);
+  }
 
-  // insert the checksum
-  std::array<char, 4> cksum{0, 0, 0, 0};
-  checksum(data() + HEADER_SIZE, size() - HEADER_SIZE, cksum);
-  insert(&cksum, sizeof cksum, HEADER_CHECKSUM_OFFSET);
+ private:
+};
+
+std::unique_ptr<char[]> encode_version(const Version &msg, size_t *sz) {
+  Encoder enc;
+  enc.push(msg.headers);
+  enc.push(msg.version);
+  enc.push(msg.services);
+  enc.push(msg.timestamp);
+  enc.push(msg.addr_recv);
+  enc.push(msg.addr_from);
+  enc.push(msg.nonce);
+  enc.push(msg.user_agent);
+  enc.push(msg.start_height);
+  enc.push(msg.relay);
+  return enc.serialize(sz);
 }
 
 }  // namespace spv

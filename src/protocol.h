@@ -20,13 +20,14 @@
 #include <cstring>
 #include <string>
 
-#include "./uvw.h"
+#include "./addr.h"
+#include "./util.h"
 
 namespace spv {
 // these must be unsigned, enums are signed
-#define MAINNET_MAGIC 0xD9B4BEF9
-#define TESTNET_MAGIC 0xDAB5BFFA
-#define TESTNET3_MAGIC 0x0709110B
+inline uint32_t MAINNET_MAGIC = 0xD9B4BEF9;
+inline uint32_t TESTNET_MAGIC = 0xDAB5BFFA;
+inline uint32_t TESTNET3_MAGIC = 0x0709110B;
 
 // constants related to the protocol itself
 enum {
@@ -59,9 +60,9 @@ struct Headers {
   uint32_t payload_size;
   uint32_t checksum;
 
-  Headers() : magic(0), payload_size(0), checksum(0) {}
+  Headers() : magic(TESTNET3_MAGIC), payload_size(0), checksum(0) {}
   explicit Headers(const std::string &command)
-      : magic(0), command(command), payload_size(0), checksum(0) {}
+      : magic(TESTNET3_MAGIC), command(command), payload_size(0), checksum(0) {}
   Headers(const Headers &other)
       : magic(other.magic),
         command(other.command),
@@ -69,49 +70,38 @@ struct Headers {
         checksum(other.checksum) {}
 };
 
-#define VERSION_FIELDS \
-  uint64_t services;   \
-  char addr[16];       \
-  uint16_t port;
-
 struct VersionNetAddr {
-  VERSION_FIELDS
+  uint64_t services;
+  Addr addr;
 
-  VersionNetAddr() : services(0), port(0) {
-    std::memset(&addr, 0, sizeof addr);
-  }
+  VersionNetAddr() : services(0) {}
 };
 
 struct NetAddr {
   uint32_t time;
-  VERSION_FIELDS
+  uint64_t services;
+  Addr addr;
 
-  NetAddr() : time(0), services(0), port(0) {
-    std::memset(&addr, 0, sizeof addr);
-  }
+  NetAddr() : time(time32()), services(0) {}
 };
 
 struct Message {
   Headers headers;
 
-  Message() = delete;
-
- protected:
-  explicit Message(const Headers &hdrs) : headers(hdrs) {}
+  Message() {}
+  explicit Message(const std::string &command) : headers(command) {}
 };
 
 struct Ping : Message {
   uint64_t nonce;
 
-  Ping() = delete;
-  Ping(const Headers &hdrs, uint64_t nonce = 0) : Message(hdrs), nonce(nonce) {}
+  Ping() : Message("ping"), nonce(0) {}
 };
 
 struct Pong : Message {
   uint64_t nonce;
 
-  Pong() = delete;
-  Pong(const Headers &hdrs, uint64_t nonce = 0) : Message(hdrs), nonce(nonce) {}
+  Pong() : Message("pong"), nonce(0) {}
 };
 
 struct Version : Message {
@@ -125,19 +115,17 @@ struct Version : Message {
   uint32_t start_height;
   uint8_t relay;
 
-  Version() = delete;
-  explicit Version(const Headers &hdrs)
-      : Message(hdrs),
+  Version()
+      : Message("version"),
         version(0),
         services(0),
-        timestamp(0),
+        timestamp(time64()),
         nonce(0),
         start_height(0),
         relay(0) {}
 };
 
 struct Verack : Message {
-  Verack() = delete;
-  explicit Verack(const Headers &hdrs) : Message(hdrs) {}
+  Verack() : Message("verack") {}
 };
 }  // namespace spv

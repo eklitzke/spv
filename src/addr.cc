@@ -55,4 +55,17 @@ Addr::Addr(const addrinfo *ai) : af_(ai->ai_family) {
   uvw_addr_.port = TESTNET_PORT;
   uvw_addr_.ip = buf;
 }
+
+void Addr::fill_addr_buf(std::array<char, 16> &buf) const {
+  switch (af_) {
+    case AF_INET:
+      std::memset(buf.data(), 0, 12);
+      std::memmove(buf.data() + 12, &addr_.ipv4.s_addr, 4);
+      return;
+    case AF_INET6:
+      std::memmove(buf.data(), &addr_.ipv6.s6_addr, 16);
+      return;
+  }
+  assert(false);  // not reached
+}
 }

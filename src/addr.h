@@ -20,6 +20,9 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
+#include <array>
+#include <cstring>
+
 #include "./uvw.h"
 
 namespace spv {
@@ -30,7 +33,7 @@ union inaddr {
 
 class Addr {
  public:
-  Addr() = delete;
+  Addr() : af_(AF_INET) {}  // TODO: this is bad
   Addr(const Addr& other) : af_(other.af_), addr_(other.addr_) {
     uvw_addr_.ip = other.uvw_addr_.ip;
     uvw_addr_.port = other.uvw_addr_.port;
@@ -42,6 +45,15 @@ class Addr {
   inline in6_addr ipv6() const { return addr_.ipv6; }
   inline uint16_t port() const { return static_cast<uint16_t>(uvw_addr_.port); }
   inline const uvw::Addr& uvw_addr() const { return uvw_addr_; }
+
+  inline void set_addr_family(int af) { af_ = af; }
+  inline void set_port(uint16_t port) {
+    // caller must make sure to set this in host order
+    uvw_addr_.port = port;
+  }
+
+  // must have 16 bytes of storage space
+  void fill_addr_buf(std::array<char, 16>& buf) const;
 
   inline bool operator==(const Addr& other) const {
     return af_ == other.af_ && uvw_addr_ == other.uvw_addr_;

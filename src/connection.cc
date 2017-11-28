@@ -23,6 +23,7 @@
 #include "./protocol.h"
 
 #define PULL_MSG(cmd)                                 \
+  cmd.headers = hdrs;                                 \
   if (dec.pull_##cmd(cmd)) {                          \
     if (dec.validate_msg(cmd)) {                      \
       ok = true;                                      \
@@ -73,16 +74,16 @@ bool Connection::read_message() {
   bool ok = false;
   Decoder dec(buf_.data() + HEADER_SIZE, hdrs.payload_size);
   if (command == "version") {
-    Version version(hdrs);
+    Version version;
     PULL_MSG(version);
   } else if (command == "verack") {
-    Verack verack(hdrs);
+    Verack verack;
     PULL_MSG(verack);
   } else if (command == "ping") {
-    Ping ping(hdrs);
+    Ping ping;
     PULL_MSG(ping);
   } else if (command == "pong") {
-    Pong pong(hdrs);
+    Pong pong;
     PULL_MSG(pong);
   }
   buf_.consume(msg_size);
@@ -90,22 +91,16 @@ bool Connection::read_message() {
 }
 
 void Connection::send_version(uint64_t nonce, uint64_t services) {
-  our_nonce_ = nonce;
-  our_services_ = services;
-
-  Encoder enc("version");
-  enc.push_int<uint32_t>(PROTOCOL_VERSION);  // version
-  enc.push_int<uint64_t>(services);          // services
-  enc.push_time<uint64_t>();                 // timestamp
-  enc.push_netaddr(addr_);                   // addr_recv
-  enc.push_netaddr(nullptr);                 // addr_from
-  enc.push_int<uint64_t>(nonce);             // nonce
-  enc.push_string(SPV_USER_AGENT);           // user-agent
-  enc.push_int<uint32_t>(0);                 // start height
-  enc.push_bool(true);                       // relay
+  Version ver;
+  ver.version = PROTOCOL_VERSION;
+  ver.services = services;
+  ver.timestamp = time32();
+  ver.addr_recv.addr = addr_;
+  ver.nonce = nonce;
+  ver.user_agent = SPV_USER_AGENT;
 
   size_t sz;
-  std::unique_ptr<char[]> data = enc.serialize(&sz);
+  std::unique_ptr<char[]> data = encode_version(ver, &sz);
   log->debug("writing {} byte version message to {}", sz, addr_);
   tcp_->write(std::move(data), sz);
 }

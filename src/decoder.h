@@ -101,8 +101,7 @@ class Decoder {
 
   // Caller *must* check the buffer size
   void pull_headers(Headers &headers) {
-    char cmd_buf[COMMAND_SIZE];
-    std::memset(&cmd_buf, 0, sizeof cmd_buf);
+    char cmd_buf[COMMAND_SIZE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     pull(headers.magic);
     if (headers.magic != TESTNET3_MAGIC) {
       decoder_log->warn("peer sent wrong magic bytes");
@@ -114,20 +113,24 @@ class Decoder {
     pull(headers.checksum);
   }
 
+  bool pull_addr(Addr &addr) {
+    char addr_buf[ADDR_SIZE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    PULL(addr_buf);  // TODO: actually use this field
+    uint16_t port;
+    PULL(port);
+    addr.set_port(be16toh(port));
+  }
+
   bool pull_netaddr(VersionNetAddr &addr) {
     PULL(addr.services);
-    PULL(addr.addr);
-    PULL(addr.port);
-    addr.port = be16toh(addr.port);  // TODO: convert ip as well
+    CHECK(pull_addr(addr.addr));
     return true;
   }
 
   bool pull_netaddr(NetAddr &addr) {
     PULL(addr.time);
     PULL(addr.services);
-    PULL(addr.addr);
-    PULL(addr.port);
-    addr.port = be16toh(addr.port);  // TODO: convert ip as well
+    CHECK(pull_addr(addr.addr));
     return true;
   }
 

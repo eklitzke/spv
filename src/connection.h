@@ -22,6 +22,7 @@
 #include "./addr.h"
 #include "./buffer.h"
 #include "./decoder.h"
+#include "./util.h"
 #include "./uvw.h"
 
 namespace spv {
