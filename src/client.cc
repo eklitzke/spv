@@ -22,7 +22,6 @@
 #include <chrono>
 #include <iostream>
 
-#include "./config.h"
 #include "./logging.h"
 #include "./protocol.h"
 #include "./util.h"
@@ -42,23 +41,6 @@ void Client::run() {
   for (const auto &seed : testSeeds) {
     lookup_seed(seed);
   }
-}
-
-void Client::send_version(Connection &conn) {
-  Encoder enc("version");
-  enc.push_int<uint32_t>(PROTOCOL_VERSION);   // version
-  enc.push_int<uint64_t>(0);                  // services
-  enc.push_time<uint64_t>();                  // timestamp
-  enc.push_netaddr(conn.addr());              // addr_recv
-  enc.push_netaddr(nullptr);                  // addr_from
-  enc.push_int<uint64_t>(connection_nonce_);  // nonce
-  enc.push_string(SPV_USER_AGENT);            // user-agent
-  enc.push_int<uint32_t>(0);                  // start height
-  enc.push_bool(true);                        // relay
-
-  size_t sz;
-  std::unique_ptr<char[]> data = enc.move_buffer(&sz);
-  conn->write(std::move(data), sz);
 }
 
 void Client::lookup_seed(const std::string &seed) {
@@ -112,8 +94,9 @@ void Client::connect_to_peer(const Addr &addr) {
         cancel_timer();
         remove_connection(conn);
       });
-  conn->on<uvw::DataEvent>(
-      [](const auto &, auto &) { log->info("got a data read event"); });
+  conn->on<uvw::DataEvent>([&](const auto &data, auto &) {
+    conn.read(data.data.get(), data.length);
+  });
   conn->once<uvw::CloseEvent>([=](const auto &, auto &) {
     log->debug("closing connection {}", addr);
     cancel_timer();
@@ -122,7 +105,7 @@ void Client::connect_to_peer(const Addr &addr) {
     log->info("connected to new peer {}", addr);
     cancel_timer();
     conn->read();
-    send_version(conn);
+    conn.send_version(connection_nonce_, 0);
   });
   conn->once<uvw::EndEvent>([=, &conn](const auto &, auto &c) {
     log->info("remote peer {} closed connection", addr);

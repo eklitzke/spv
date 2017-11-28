@@ -35,14 +35,22 @@ class Connection {
         tcp_(std::move(other.tcp_)) {}
   Connection(const Connection& other) = delete;
 
-  uvw::TcpHandle* operator->() { return tcp_.get(); }
-
-  void connect() { tcp_->connect(addr_.uvw_addr()); }
   const Addr& addr() const { return addr_; }
+
+  inline uvw::TcpHandle* tcp() { return tcp_.get(); }
+  inline uvw::TcpHandle* operator->() { return tcp_.get(); }
 
   inline bool operator==(const Connection& other) const {
     return this == &other;
   }
+
+  // establish the connection
+  void connect();
+
+  // read data
+  void read(const char* data, size_t sz);
+
+  void send_version(uint64_t nonce, uint64_t services);
 
  private:
   Addr addr_;

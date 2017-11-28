@@ -62,7 +62,5 @@ class Client {
 
   // enqueue connections
   void remove_connection(Connection &conn, bool reconnect = true);
-
-  void send_version(Connection &conn);
 };
 }  // namespace spv
