@@ -68,4 +68,8 @@ void Addr::fill_addr_buf(std::array<char, 16> &buf) const {
   }
   assert(false);  // not reached
 }
+}  // namespace spv
+
+std::ostream &operator<<(std::ostream &o, const spv::Addr &addr) {
+  return o << addr.uvw_addr();
 }

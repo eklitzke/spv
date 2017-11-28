@@ -78,7 +78,7 @@ void Client::connect_to_peers() {
 void Client::connect_to_peer(const Addr &addr) {
   log->debug("connecting to peer {}", addr);
 
-  auto pr = connections_.emplace(addr, loop_, nonce_, services_);
+  auto pr = connections_.emplace(us_, addr, loop_);
   assert(pr.second);
   Connection &conn = const_cast<Connection &>(*pr.first);
 
@@ -90,7 +90,7 @@ void Client::connect_to_peer(const Addr &addr) {
 
   conn->once<uvw::ErrorEvent>(
       [this, cancel_timer, &conn](const auto &, auto &c) {
-        log->debug("error from {}", conn.addr());
+        log->debug("error from {}", conn.peer());
         cancel_timer();
         remove_connection(conn);
       });
@@ -117,7 +117,7 @@ void Client::connect_to_peer(const Addr &addr) {
   timer->once<uvw::ErrorEvent>(
       [=](const auto &, auto &timer) { timer.close(); });
   timer->on<uvw::TimerEvent>([this, &conn](const auto &, auto &timer) {
-    log->warn("connection to {} timed out", conn.addr());
+    log->warn("connection to {} timed out", conn.peer());
     remove_connection(conn);
     timer.close();
   });
@@ -132,7 +132,7 @@ void Client::remove_connection(Connection &conn, bool reconnect) {
 
   bool removed = connections_.erase(conn);
   if (!removed) {
-    log->error("failed to remove connection to peer {}", conn.addr());
+    log->error("failed to remove connection to peer {}", conn.peer());
     return;
   }
 

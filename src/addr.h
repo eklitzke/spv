@@ -64,11 +64,9 @@ class Addr {
   inaddr addr_;
   uvw::Addr uvw_addr_;
 };
+}  // namespace spv
 
-static std::ostream& operator<<(std::ostream& o, const Addr& addr) {
-  return o << addr.uvw_addr();
-}
-}
+std::ostream& operator<<(std::ostream& o, const spv::Addr& addr);
 
 namespace std {
 template <>
@@ -79,4 +77,4 @@ struct hash<spv::Addr> {
     return h1 ^ (h2 << 1);
   }
 };
-}
+}  // namespace std

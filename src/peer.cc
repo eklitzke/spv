@@ -14,23 +14,14 @@
 // You should have received a copy of the GNU General Public License along with
 // SPV. If not, see <http://www.gnu.org/licenses/>.
 
-#pragma once
+#include "./peer.h"
 
-#include "uvw/src/uvw.hpp"
+#include <ostream>
 
-std::ostream& operator<<(std::ostream& o, const uvw::Addr& addr);
-
-namespace spv {
-bool operator==(const uvw::Addr& a, const uvw::Addr& b);
-}  // namespace uvw
-
-namespace std {
-template <>
-struct hash<uvw::Addr> {
-  std::size_t operator()(const uvw::Addr& addr) const noexcept {
-    std::size_t h1 = std::hash<std::string>{}(addr.ip);
-    std::size_t h2 = std::hash<unsigned int>{}(addr.port);
-    return h1 ^ (h2 << 1);
+std::ostream& operator<<(std::ostream& o, const spv::Peer& p) {
+  return o << p.addr;
+  if (!p.user_agent.empty()) {
+    o << " [" << p.user_agent << "]";
   }
-};
+  return o;
 }

@@ -16,21 +16,29 @@
 
 #pragma once
 
-#include "uvw/src/uvw.hpp"
+#include <cstdint>
+#include <ostream>
+#include <string>
 
-std::ostream& operator<<(std::ostream& o, const uvw::Addr& addr);
+#include "./addr.h"
 
 namespace spv {
-bool operator==(const uvw::Addr& a, const uvw::Addr& b);
-}  // namespace uvw
+struct Peer {
+  uint32_t nonce;
+  uint32_t services;
+  std::string user_agent;
+  Addr addr;
 
-namespace std {
-template <>
-struct hash<uvw::Addr> {
-  std::size_t operator()(const uvw::Addr& addr) const noexcept {
-    std::size_t h1 = std::hash<std::string>{}(addr.ip);
-    std::size_t h2 = std::hash<unsigned int>{}(addr.port);
-    return h1 ^ (h2 << 1);
-  }
+  Peer() : nonce(0), services(0) {}
+  explicit Peer(const Addr& addr) : addr(addr) {}
+  Peer(uint32_t n, uint32_t s, const std::string& ua)
+      : nonce(n), services(s), user_agent(ua) {}
+  Peer(const Peer& other)
+      : nonce(other.nonce),
+        services(other.services),
+        user_agent(other.user_agent),
+        addr(other.addr) {}
 };
-}
+}  // namespace spv
+
+std::ostream& operator<<(std::ostream& o, const spv::Peer& p);

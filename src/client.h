@@ -23,6 +23,7 @@
 
 #include "./addr.h"
 #include "./buffer.h"
+#include "./config.h"
 #include "./connection.h"
 #include "./encoder.h"
 #include "./logging.h"
@@ -34,8 +35,7 @@ class Client {
  public:
   Client(uvw::Loop &loop, size_t max_connections)
       : max_connections_(max_connections),
-        nonce_(rand64()),
-        services_(0),
+        us_(rand64(), 0, SPV_USER_AGENT),
         loop_(loop) {}
 
   Client() = delete;
@@ -45,9 +45,8 @@ class Client {
   void run();
 
  private:
-  const size_t max_connections_;
-  const uint64_t nonce_;
-  const uint64_t services_;
+  size_t max_connections_;
+  Peer us_;
   uvw::Loop &loop_;
   std::unordered_set<Addr> known_peers_;
   std::unordered_set<Connection> connections_;

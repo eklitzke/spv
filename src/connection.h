@@ -21,7 +21,9 @@
 
 #include "./addr.h"
 #include "./buffer.h"
+#include "./config.h"
 #include "./decoder.h"
+#include "./peer.h"
 #include "./util.h"
 #include "./uvw.h"
 
@@ -29,16 +31,11 @@ namespace spv {
 class Connection {
  public:
   Connection() = delete;
-  Connection(Addr addr, uvw::Loop& loop, uint64_t nonce, uint64_t services)
-      : addr_(addr),
-        tcp_(loop.resource<uvw::TcpHandle>()),
-        nonce_(nonce),
-        services_(services),
-        their_nonce_(0),
-        their_services_(0) {}
+  Connection(const Peer& us, Addr addr, uvw::Loop& loop)
+      : us_(us), peer_(addr), tcp_(loop.resource<uvw::TcpHandle>()) {}
   Connection(const Connection& other) = delete;
 
-  const Addr& addr() const { return addr_; }
+  const Peer& peer() const { return peer_; }
 
   inline uvw::TcpHandle* tcp() { return tcp_.get(); }
   inline uvw::TcpHandle* operator->() { return tcp_.get(); }
@@ -56,15 +53,10 @@ class Connection {
   void send_version();
 
  private:
-  Addr addr_;
   Buffer buf_;
+  const Peer& us_;
+  Peer peer_;
   std::shared_ptr<uvw::TcpHandle> tcp_;
-
-  // our nonce and services
-  uint64_t nonce_, services_;
-
-  // theirs
-  uint64_t their_nonce_, their_services_;
 
   // returns true if a message was actually read
   bool read_message();
@@ -78,7 +70,7 @@ namespace std {
 template <>
 struct hash<spv::Connection> {
   std::size_t operator()(const spv::Connection& conn) const noexcept {
-    return std::hash<uvw::Addr>{}(conn.addr().uvw_addr());
+    return std::hash<uvw::Addr>{}(conn.peer().addr.uvw_addr());
   }
 };
 }

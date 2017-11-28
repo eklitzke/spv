@@ -16,35 +16,34 @@
 
 #include "./connection.h"
 
-#include "./config.h"
 #include "./decoder.h"
 #include "./encoder.h"
 #include "./logging.h"
 #include "./protocol.h"
 
-#define PULL_MSG(cmd)                                     \
-  cmd.headers = hdrs;                                     \
-  if (dec.pull(cmd)) {                                    \
-    if (dec.validate_msg(cmd)) {                          \
-      ok = true;                                          \
-      log->info("parsed command '" #cmd "'");             \
-    } else {                                              \
-      log->warn("failed to checksum command '" #cmd "'"); \
-    }                                                     \
-  } else {                                                \
-    log->warn("failed to parse command " #cmd "'");       \
+#define PULL_MSG(cmd)                                                    \
+  cmd.headers = hdrs;                                                    \
+  if (dec.pull(cmd)) {                                                   \
+    if (dec.validate_msg(cmd)) {                                         \
+      ok = true;                                                         \
+      log->info("received '" #cmd "' from {}", peer_);                   \
+    } else {                                                             \
+      log->warn("failed to checksum command '" #cmd "' from {}", peer_); \
+    }                                                                    \
+  } else {                                                               \
+    log->warn("failed to parse command " #cmd "' from {}", peer_);       \
   }
 
 namespace spv {
 MODULE_LOGGER
 
 void Connection::connect() {
-  log->debug("connecting to peer {}", addr_);
-  tcp_->connect(addr_.uvw_addr());
+  log->debug("connecting to peer {}", peer_);
+  tcp_->connect(peer_.addr.uvw_addr());
 }
 
 void Connection::read(const char* data, size_t sz) {
-  log->debug("read {} bytes from peer {}", sz, addr_);
+  log->debug("read {} bytes from peer {}", sz, peer_);
   buf_.append(data, sz);
   for (bool ok = true; ok; ok = read_message())
     ;
@@ -69,7 +68,7 @@ bool Connection::read_message() {
   }
 
   const std::string command = hdrs.command;
-  log->debug("peer {} sent command: {}", addr_, command);
+  log->debug("peer {} sent command: {}", peer_, command);
 
   bool ok = false;
   Decoder dec(buf_.data() + HEADER_SIZE, hdrs.payload_size);
@@ -77,8 +76,9 @@ bool Connection::read_message() {
     Version version;
     PULL_MSG(version);
     if (ok) {
-      their_nonce_ = version.nonce;
-      their_services_ = version.services;
+      peer_.nonce = version.nonce;
+      peer_.services = version.services;
+      peer_.user_agent = version.user_agent;
 
       Verack ack;
       send_msg(ack);
@@ -97,7 +97,7 @@ bool Connection::read_message() {
     Pong pong;
     PULL_MSG(pong);
   } else {
-    log->warn("ignoring unknown command '{}' from peer {}", command, addr_);
+    log->warn("ignoring unknown command '{}' from peer {}", command, peer_);
   }
   buf_.consume(msg_size);
   return true;
@@ -106,19 +106,17 @@ bool Connection::read_message() {
 void Connection::send_msg(const Message& msg) {
   size_t sz;
   std::unique_ptr<char[]> data = msg.encode(sz);
-  log->debug("sending message '{}', size={}, addr={}", msg.headers.command, sz,
-             addr_);
+  log->info("sending '{}' to {}, size={}", msg.headers.command, peer_, sz);
   tcp_->write(std::move(data), sz);
 }
 
 void Connection::send_version() {
   Version ver;
   ver.version = PROTOCOL_VERSION;
-  ver.services = services_;
-  ver.timestamp = time32();
-  ver.addr_recv.addr = addr_;
-  ver.nonce = nonce_;
-  ver.user_agent = SPV_USER_AGENT;
+  ver.services = us_.services;
+  ver.addr_recv.addr = peer_.addr;
+  ver.nonce = us_.nonce;
+  ver.user_agent = us_.user_agent;
 
   send_msg(ver);
 }

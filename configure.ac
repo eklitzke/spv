@@ -48,7 +48,7 @@ AC_FUNC_STRERROR_R
 AC_FUNC_STRTOD
 AC_CHECK_FUNCS([clock_gettime dup2 getpagesize gettimeofday localeconv localtime_r memmove memset mkdir realpath rmdir strerror strstr strtoul utime])
 
-CXXFLAGS="-g -I ../third_party/spdlog/include -I ../third_party"
+CXXFLAGS+=" -Wall -I ../third_party/spdlog/include -I ../third_party"
 AS_COMPILER_FLAG([-std=c++17],
                  [CXXFLAGS+=" -std=c++17"])
 AS_COMPILER_FLAG([-fdiagnostics-color=auto],
