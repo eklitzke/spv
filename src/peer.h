@@ -26,16 +26,18 @@ namespace spv {
 struct Peer {
   uint32_t nonce;
   uint32_t services;
+  uint32_t version;
   std::string user_agent;
   Addr addr;
 
-  Peer() : nonce(0), services(0) {}
+  Peer() : nonce(0), services(0), version(0) {}
   explicit Peer(const Addr& addr) : addr(addr) {}
-  Peer(uint32_t n, uint32_t s, const std::string& ua)
-      : nonce(n), services(s), user_agent(ua) {}
+  Peer(uint32_t n, uint32_t s, uint32_t v, const std::string& ua)
+      : nonce(n), services(s), version(v), user_agent(ua) {}
   Peer(const Peer& other)
       : nonce(other.nonce),
         services(other.services),
+        version(other.version),
         user_agent(other.user_agent),
         addr(other.addr) {}
 };

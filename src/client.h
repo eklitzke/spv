@@ -25,6 +25,7 @@
 #include "./buffer.h"
 #include "./config.h"
 #include "./connection.h"
+#include "./constants.h"
 #include "./encoder.h"
 #include "./logging.h"
 #include "./util.h"
@@ -35,7 +36,7 @@ class Client {
  public:
   Client(uvw::Loop &loop, size_t max_connections)
       : max_connections_(max_connections),
-        us_(rand64(), 0, SPV_USER_AGENT),
+        us_(rand64(), 0, PROTOCOL_VERSION, SPV_USER_AGENT),
         loop_(loop) {}
 
   Client() = delete;

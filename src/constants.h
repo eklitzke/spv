@@ -14,11 +14,38 @@
 // You should have received a copy of the GNU General Public License along with
 // SPV. If not, see <http://www.gnu.org/licenses/>.
 
-#include "./logging.h"
+#pragma once
 
-#define DEFINE_LOGGER(name, tag) \
-  std::shared_ptr<spdlog::logger> name##_log = spdlog::stdout_color_st(tag);
+#include <cstdint>
+#include <cstring>
+#include <string>
+
+#include "./addr.h"
+#include "./util.h"
 
 namespace spv {
-DEFINE_LOGGER(decoder, "decoder.h")
+// constants related to the protocol itself
+enum {
+  PROTOCOL_VERSION = 70015,
+  TESTNET_PORT = 18333,
+};
+
+// constants related to message headers
+enum {
+  HEADER_PADDING = 8,
+  HEADER_SIZE = 24,
+  HEADER_LEN_OFFSET = 16,
+  HEADER_CHECKSUM_OFFSET = 20,
+};
+
+// netaddr constants
+enum {
+  ADDR_SIZE = 16,
+  PORT_SIZE = 2,
+};
+
+// constants related to version messages
+enum {
+  COMMAND_SIZE = 12,
+};
 }  // namespace spv

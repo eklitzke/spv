@@ -28,9 +28,10 @@
 
 #include "./addr.h"
 #include "./buffer.h"
+#include "./constants.h"
 #include "./logging.h"
+#include "./message.h"
 #include "./pow.h"
-#include "./protocol.h"
 
 namespace spv {
 struct Encoder : Buffer {

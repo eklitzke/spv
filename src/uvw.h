@@ -16,13 +16,16 @@
 
 #pragma once
 
+#include <cstdint>
+#include <ostream>
+
 #include "uvw/src/uvw.hpp"
 
 std::ostream& operator<<(std::ostream& o, const uvw::Addr& addr);
 
 namespace spv {
 bool operator==(const uvw::Addr& a, const uvw::Addr& b);
-}  // namespace uvw
+}  // namespace spv
 
 namespace std {
 template <>
@@ -33,4 +36,4 @@ struct hash<uvw::Addr> {
     return h1 ^ (h2 << 1);
   }
 };
-}
+}  // namespace std

@@ -19,20 +19,7 @@
 #include "./decoder.h"
 #include "./encoder.h"
 #include "./logging.h"
-#include "./protocol.h"
-
-#define PULL_MSG(cmd)                                                    \
-  cmd.headers = hdrs;                                                    \
-  if (dec.pull(cmd)) {                                                   \
-    if (dec.validate_msg(cmd)) {                                         \
-      ok = true;                                                         \
-      log->info("received '" #cmd "' from {}", peer_);                   \
-    } else {                                                             \
-      log->warn("failed to checksum command '" #cmd "' from {}", peer_); \
-    }                                                                    \
-  } else {                                                               \
-    log->warn("failed to parse command " #cmd "' from {}", peer_);       \
-  }
+#include "./message.h"
 
 namespace spv {
 MODULE_LOGGER
@@ -54,53 +41,41 @@ bool Connection::read_message() {
     return false;
   }
 
-  // get the headers
-  Headers hdrs;
-  {
-    Decoder dec(buf_.data(), HEADER_SIZE);
-    assert(dec.pull(hdrs));
+  bool ret = false;
+  size_t bytes_consumed = 0;
+  std::unique_ptr<Message> msg =
+      decode_message(peer_, buf_.data(), buf_.size(), &bytes_consumed);
+  if (bytes_consumed != 0) {
+    ret = true;
+    buf_.consume(bytes_consumed);
   }
 
-  // do we have enough data for the payload?
-  size_t msg_size = HEADER_SIZE + hdrs.payload_size;
-  if (buf_.size() < msg_size) {
-    return false;
-  }
-
-  const std::string command = hdrs.command;
-  log->debug("peer {} sent command: {}", peer_, command);
-
-  bool ok = false;
-  Decoder dec(buf_.data() + HEADER_SIZE, hdrs.payload_size);
-  if (command == "version") {
-    Version version;
-    PULL_MSG(version);
-    if (ok) {
-      peer_.nonce = version.nonce;
-      peer_.services = version.services;
-      peer_.user_agent = version.user_agent;
-
-      Verack ack;
-      send_msg(ack);
-    }
-  } else if (command == "verack") {
-    Verack verack;
-    PULL_MSG(verack);
-  } else if (command == "ping") {
-    Ping ping;
-    PULL_MSG(ping);
-    if (ok) {
-      Pong pong(ping.nonce);
+  if (msg.get() != nullptr) {
+    const std::string& cmd = msg->headers.command;
+    log->info("got message '{}' from peer {}", cmd, peer_);
+    if (cmd == "version") {
+      Version* ver = dynamic_cast<Version*>(msg.get());
+      peer_.nonce = ver->nonce;
+      peer_.services = ver->services;
+      peer_.user_agent = ver->user_agent;
+      peer_.version = ver->version;
+      log->info("finished handshake with peer {}", peer_);
+      send_msg(Verack{});
+    } else if (cmd == "verack") {
+      // no-op
+    } else if (cmd == "ping") {
+      Ping* ping = dynamic_cast<Ping*>(msg.get());
+      Pong pong;
+      pong.nonce = ping->nonce;
       send_msg(pong);
+    } else if (cmd == "pong") {
+      // no-op
+    } else {
+      // not reached, decoder.cc already check this
+      log->warn("unhandle p2p message type '{}'", cmd);
     }
-  } else if (command == "pong") {
-    Pong pong;
-    PULL_MSG(pong);
-  } else {
-    log->warn("ignoring unknown command '{}' from peer {}", command, peer_);
   }
-  buf_.consume(msg_size);
-  return true;
+  return ret;
 }
 
 void Connection::send_msg(const Message& msg) {

@@ -24,35 +24,10 @@
 #include "./util.h"
 
 namespace spv {
-// these must be unsigned, enums are signed
+// these must be unsigned, enums may be signed
 inline uint32_t MAINNET_MAGIC = 0xD9B4BEF9;
 inline uint32_t TESTNET_MAGIC = 0xDAB5BFFA;
 inline uint32_t TESTNET3_MAGIC = 0x0709110B;
-
-// constants related to the protocol itself
-enum {
-  PROTOCOL_VERSION = 70015,
-  TESTNET_PORT = 18333,
-};
-
-// constants related to message headers
-enum {
-  HEADER_PADDING = 8,
-  HEADER_SIZE = 24,
-  HEADER_LEN_OFFSET = 16,
-  HEADER_CHECKSUM_OFFSET = 20,
-};
-
-// netaddr constants
-enum {
-  ADDR_SIZE = 16,
-  PORT_SIZE = 2,
-};
-
-// constants related to version messages
-enum {
-  COMMAND_SIZE = 12,
-};
 
 struct Headers {
   uint32_t magic;
@@ -90,25 +65,33 @@ struct Message {
 
   Message() {}
   explicit Message(const std::string &command) : headers(command) {}
+  explicit Message(const Headers &hdrs) : headers(hdrs) {}
 
   virtual std::unique_ptr<char[]> encode(size_t &sz) const = 0;
 };
 
 #define FINAL_ENCODE std::unique_ptr<char[]> encode(size_t &sz) const final;
 
+struct AddrMsg : Message {
+  std::vector<NetAddr> addrs;
+
+  AddrMsg() : Message("addr") {}
+  FINAL_ENCODE
+};
+
 struct Ping : Message {
   uint64_t nonce;
 
-  Ping() : Ping(0) {}
-  Ping(uint64_t nonce) : Message("ping"), nonce(nonce) {}
+  Ping() : Ping(Headers("ping")) {}
+  explicit Ping(const Headers &hdrs) : Message(hdrs) {}
   FINAL_ENCODE
 };
 
 struct Pong : Message {
   uint64_t nonce;
 
-  Pong() : Pong(0) {}
-  Pong(uint64_t nonce) : Message("pong"), nonce(nonce) {}
+  Pong() : Pong(Headers("pong")) {}
+  explicit Pong(const Headers &hdrs) : Message(hdrs) {}
   FINAL_ENCODE
 };
 
@@ -123,8 +106,9 @@ struct Version : Message {
   uint32_t start_height;
   uint8_t relay;
 
-  Version()
-      : Message("version"),
+  Version() : Version(Headers("version")) {}
+  explicit Version(const Headers &hdrs)
+      : Message(hdrs),
         version(0),
         services(0),
         timestamp(time64()),
@@ -135,7 +119,8 @@ struct Version : Message {
 };
 
 struct Verack : Message {
-  Verack() : Message("verack") {}
+  Verack() : Verack(Headers("verack")) {}
+  explicit Verack(const Headers &hdrs) : Message(hdrs) {}
   FINAL_ENCODE
 };
 }  // namespace spv

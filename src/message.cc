@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License along with
 // SPV. If not, see <http://www.gnu.org/licenses/>.
 
+#include "./message.h"
+
 #include "./encoder.h"
 
 #define DECLARE_ENCODE(cls) \
@@ -21,6 +23,15 @@
 
 namespace spv {
 MODULE_LOGGER
+
+DECLARE_ENCODE(AddrMsg) {
+  Encoder enc;
+  enc.push_varint(addrs.size());
+  for (const auto &addr : addrs) {
+    enc.push(addr);
+  }
+  return enc.serialize(sz);
+}
 
 DECLARE_ENCODE(Ping) {
   Encoder enc;

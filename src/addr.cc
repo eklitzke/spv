@@ -20,8 +20,8 @@
 #include <cassert>
 #include <cstring>
 
+#include "./constants.h"
 #include "./logging.h"
-#include "./protocol.h"
 
 namespace spv {
 MODULE_LOGGER

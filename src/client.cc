@@ -23,7 +23,6 @@
 #include <iostream>
 
 #include "./logging.h"
-#include "./protocol.h"
 #include "./util.h"
 
 namespace spv {
