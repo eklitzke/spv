@@ -20,7 +20,7 @@
 #include <cassert>
 #include <cstring>
 
-#include "./constants.h"
+#include "./config.h"
 #include "./logging.h"
 
 namespace spv {

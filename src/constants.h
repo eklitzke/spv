@@ -16,8 +16,6 @@
 
 #pragma once
 
-#include "./config.h"
-
 namespace spv {
 // constants related to message headers
 enum {

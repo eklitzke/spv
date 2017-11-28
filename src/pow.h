@@ -19,8 +19,6 @@
 #include <array>
 #include <cstdint>
 
-#include "PicoSHA2/picosha2.h"
-
 namespace spv {
 void checksum(const char *data, size_t sz, std::array<char, 4> &out);
 uint32_t checksum(const char *data, size_t sz);
