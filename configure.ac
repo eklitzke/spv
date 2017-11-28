@@ -8,6 +8,8 @@ AC_CONFIG_SRCDIR([src/main.cc])
 AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
+AC_LANG([C++])
+
 AM_INIT_AUTOMAKE([dist-bzip2 foreign subdir-objects -Wall -Werror])
 
 # Checks for programs.
@@ -58,8 +60,10 @@ PKG_CHECK_MODULES([libuv], [libuv >= 1])
 
 AC_DEFINE([PROTOCOL_MAGIC], [0x0709110B], [P2P protocol magic.])
 AC_DEFINE([PROTOCOL_PORT], [18333], [P2P protocol port.])
-AC_DEFINE([PROTOCOL_VERSION], [70015], [P2P protocol version.])
 AC_DEFINE([SPV_USER_AGENT], ["github.com/eklitzke/spv"], [User agent to advertise.])
+
+# See https://bitcoin.org/en/developer-reference#protocol-versions for the meaning of this
+AC_DEFINE([PROTOCOL_VERSION], [70012], [P2P protocol version.])
 
 gitcommit=`cd $srcdir && git describe --always`
 AS_IF([test x"$gitcommit" = x],

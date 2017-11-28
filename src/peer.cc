@@ -18,6 +18,8 @@
 
 #include <ostream>
 
+#include "./addr.h"
+
 std::ostream& operator<<(std::ostream& o, const spv::Peer& p) {
   o << p.addr;
   if (!p.user_agent.empty()) {

@@ -25,7 +25,12 @@
 #include "./message.h"
 #include "./peer.h"
 #include "./util.h"
-#include "./uvw.h"
+
+namespace uvw {
+class TcpHandle;
+class Loop;
+class Addr;
+}  // namespace uvw
 
 namespace spv {
 class Connection {
@@ -73,4 +78,4 @@ struct hash<spv::Connection> {
     return std::hash<uvw::Addr>{}(conn.peer().addr.uvw_addr());
   }
 };
-}
+}  // namespace std

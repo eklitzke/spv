@@ -16,14 +16,9 @@
 
 #include "./client.h"
 
-#include <sys/socket.h>
-#include <unistd.h>
-
-#include <chrono>
-#include <iostream>
+#include <cassert>
 
 #include "./logging.h"
-#include "./util.h"
 
 namespace spv {
 MODULE_LOGGER

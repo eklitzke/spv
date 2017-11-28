@@ -16,21 +16,22 @@
 
 #pragma once
 
-#include <memory>
+#include <cstddef>
 #include <string>
 #include <unordered_set>
-#include <vector>
 
-#include "./addr.h"
 #include "./buffer.h"
 #include "./config.h"
 #include "./connection.h"
-#include "./constants.h"
-#include "./logging.h"
-#include "./util.h"
-#include "./uvw.h"
+#include "./peer.h"
+
+namespace uvw {
+class Loop;
+}
 
 namespace spv {
+class Addr;
+
 class Client {
  public:
   Client(uvw::Loop &loop, size_t max_connections)
