@@ -7,6 +7,12 @@ are interested in learning more about how the Bitcoin protocol works, or are
 interested in writing you own SPV client, you may find the source code here
 useful as a reference.
 
+## Status
+
+This code is considered **alpha** and incomplete. The client can connect to the
+peers via the DNS seed list, send `version` messages, and receive `version` and
+`verack` messages.
+
 ## Compiling
 
 First fetch the third party build dependencies:
