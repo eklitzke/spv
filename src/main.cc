@@ -31,7 +31,6 @@
 static const char usage_str[] = "Usage: spv [-h|--help] [-v|--version]\n";
 
 int main(int argc, char** argv) {
-  DECLARE_LOGGER(logger)
   static const char short_opts[] = "c:dhv";
   static struct option long_opts[] = {
       {"debug", no_argument, 0, 'd'},
@@ -70,7 +69,6 @@ int main(int argc, char** argv) {
     }
   }
 
-  logger->info("main started, creating client");
   auto loop = uvw::Loop::getDefault();
   spv::Client client(*loop, max_connections);
   client.run();

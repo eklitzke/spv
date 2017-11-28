@@ -16,13 +16,24 @@
 
 #pragma once
 
-#include <memory>
+#include <endian.h>
 
-#include "spdlog/fmt/ostr.h"
-#include "spdlog/spdlog.h"
+#include "./protocol.h"
+#include "./reader.h"
 
-#define EXTERN_LOGGER(name) extern std::shared_ptr<spdlog::logger> name##_log;
+namespace spv {
+class Decoder {
+ public:
+  Decoder() = delete;
+  Decoder(const char *data, size_t sz) : rd_(data, sz) {}
 
-#define MODULE_LOGGER                          \
-  static std::shared_ptr<spdlog::logger> log = \
-      spdlog::stdout_color_st(__FILE__);
+  bool pull_headers(Headers &headers) {
+    if (!rd_.pull(headers)) return false;
+    headers.payload_size = le32toh(headers.payload_size);
+    return true;
+  }
+
+ private:
+  Reader rd_;
+};
+}  // namespace spv

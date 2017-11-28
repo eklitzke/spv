@@ -17,43 +17,41 @@
 #pragma once
 
 #include <cstdint>
+#include <cstring>
+#include <memory>
+#include <type_traits>
+
+#include "./logging.h"
 
 namespace spv {
-// these must be unsigned, enums are signed
-#define MAINNET_MAGIC 0xD9B4BEF9
-#define TESTNET_MAGIC 0xDAB5BFFA
-#define TESTNET3_MAGIC 0x0709110B
+EXTERN_LOGGER(reader)
 
-// constants related to the protocol itself
-enum {
-  PROTOCOL_VERSION = 70015,
-  TESTNET_PORT = 18333,
-};
+// Reader reads through a buffer
+class Reader {
+ public:
+  Reader(const char* data, size_t cap) : data_(data), cap_(cap), off_(0) {}
 
-// constants related to message headers
-enum {
-  HEADER_PADDING = 8,
-  HEADER_SIZE = 24,
-  HEADER_LEN_OFFSET = 16,
-  HEADER_CHECKSUM_OFFSET = 20,
-};
+  inline bool pull(char* out, size_t sz) {
+    if (sz + off_ > cap_) {
+      reader_log->warn("failed to pull {} bytes", sz);
+      return false;
+    }
+    memmove(out, data_ + off_, sz);
+    off_ += sz;
+    return true;
+  }
 
-struct Headers {
-  uint32_t magic;
-  char command[12];
-  uint32_t payload_size;
-  uint32_t checksum;
-};
-static_assert(sizeof(Headers) == HEADER_SIZE);
+  template <typename T>
+  inline bool pull(T& out) {
+    return pull(reinterpret_cast<char*>(&out), sizeof(T));
+  }
 
-// netaddr constants
-enum {
-  ADDR_SIZE = 16,
-  PORT_SIZE = 2,
-};
+  // the "size" of bytes read, which internally we call the offset
+  inline size_t size() const { return off_; }
 
-// constants related to version messages
-enum {
-  COMMAND_SIZE = 12,
+ private:
+  const char* data_;
+  size_t cap_;
+  size_t off_;
 };
 }  // namespace spv

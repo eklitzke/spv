@@ -84,7 +84,7 @@ void Encoder::push_netaddr(const Addr *addr, uint64_t services,
   push_port(addr->port());
 }
 
-void Encoder::set_command(const std::string &command, uint32_t magic) {
+void Encoder::push_headers(const std::string &command, uint32_t magic) {
   assert(buf_.size() == 0);
   push_int<uint32_t>(magic);
   buf_.append_string(command, COMMAND_SIZE);

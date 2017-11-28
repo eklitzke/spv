@@ -14,15 +14,11 @@
 // You should have received a copy of the GNU General Public License along with
 // SPV. If not, see <http://www.gnu.org/licenses/>.
 
-#pragma once
+#include "./logging.h"
 
-#include <memory>
+#define DEFINE_LOGGER(name, tag) \
+  std::shared_ptr<spdlog::logger> name##_log = spdlog::stdout_color_st(tag);
 
-#include "spdlog/fmt/ostr.h"
-#include "spdlog/spdlog.h"
-
-#define EXTERN_LOGGER(name) extern std::shared_ptr<spdlog::logger> name##_log;
-
-#define MODULE_LOGGER                          \
-  static std::shared_ptr<spdlog::logger> log = \
-      spdlog::stdout_color_st(__FILE__);
+namespace spv {
+DEFINE_LOGGER(reader, "reader.h")
+}  // namespace spv

@@ -17,6 +17,7 @@
 #include "./connection.h"
 
 #include "./config.h"
+#include "./decoder.h"
 #include "./encoder.h"
 #include "./logging.h"
 #include "./protocol.h"
@@ -32,9 +33,17 @@ void Connection::connect() {
 void Connection::read(const char* data, size_t sz) {
   log->debug("read {} bytes from peer {}", sz, addr_);
   read_buf_.append(data, sz);
+
+  Decoder dec(read_buf_.data(), read_buf_.size());
+  Headers hdrs;
+  assert(dec.pull_headers(hdrs));
+  log->debug("hdrs have length {}", hdrs.payload_size);
 }
 
 void Connection::send_version(uint64_t nonce, uint64_t services) {
+  our_nonce_ = nonce;
+  our_services_ = services;
+
   Encoder enc("version");
   enc.push_int<uint32_t>(PROTOCOL_VERSION);  // version
   enc.push_int<uint64_t>(services);          // services
@@ -51,5 +60,4 @@ void Connection::send_version(uint64_t nonce, uint64_t services) {
   log->debug("writing {} byte version message to {}", sz, addr_);
   tcp_->write(std::move(data), sz);
 }
-
 }  // namespace spv

@@ -25,7 +25,6 @@
 
 namespace spv {
 MODULE_LOGGER
-
 Addr::Addr(const addrinfo *ai) : af_(ai->ai_family) {
   assert(ai->ai_family == ai->ai_addr->sa_family);
 

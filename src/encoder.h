@@ -41,7 +41,7 @@ static_assert(IPV4_PADDING == 12);
 class Encoder {
  public:
   Encoder() {}
-  explicit Encoder(const std::string &command) { set_command(command); }
+  explicit Encoder(const std::string &command) { push_headers(command); }
 
   template <typename T>
   void push_int(T val) {
@@ -75,7 +75,8 @@ class Encoder {
   }
 
   // allocate message headers, reserving the required space
-  void set_command(const std::string &command, uint32_t magic = TESTNET3_MAGIC);
+  void push_headers(const std::string &command,
+                    uint32_t magic = TESTNET3_MAGIC);
 
   std::unique_ptr<char[]> move_buffer(size_t *sz, bool finish = true) {
     if (finish) finish_headers();

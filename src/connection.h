@@ -28,11 +28,12 @@ class Connection {
  public:
   Connection() = delete;
   Connection(Addr addr, uvw::Loop& loop)
-      : addr_(addr), tcp_(loop.resource<uvw::TcpHandle>()) {}
-  Connection(Connection&& other)
-      : addr_(other.addr_),
-        read_buf_(std::move(other.read_buf_)),
-        tcp_(std::move(other.tcp_)) {}
+      : addr_(addr),
+        tcp_(loop.resource<uvw::TcpHandle>()),
+        our_nonce_(0),
+        their_nonce_(0),
+        our_services_(0),
+        their_services_(0) {}
   Connection(const Connection& other) = delete;
 
   const Addr& addr() const { return addr_; }
@@ -56,6 +57,9 @@ class Connection {
   Addr addr_;
   Buffer read_buf_;
   std::shared_ptr<uvw::TcpHandle> tcp_;
+
+  uint64_t our_nonce_, their_nonce_;
+  uint64_t our_services_, their_services_;
 };
 }  // namespace spv
 
