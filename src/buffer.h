@@ -94,8 +94,8 @@ class Buffer {
   }
 
  protected:
-  std::unique_ptr<char[]> move_buffer(size_t *sz) {
-    *sz = size_;
+  std::unique_ptr<char[]> move_buffer(size_t &sz) {
+    sz = size_;
     size_ = 0;
     capacity_ = 0;
     return std::move(data_);

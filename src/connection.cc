@@ -76,18 +76,34 @@ bool Connection::read_message() {
   if (command == "version") {
     Version version;
     PULL_MSG(version);
+    if (ok) {
+      Verack ack;
+      send_msg(ack);
+    }
   } else if (command == "verack") {
     Verack verack;
     PULL_MSG(verack);
   } else if (command == "ping") {
     Ping ping;
     PULL_MSG(ping);
+    if (ok) {
+      Pong pong(ping.nonce);
+      send_msg(pong);
+    }
   } else if (command == "pong") {
     Pong pong;
     PULL_MSG(pong);
   }
   buf_.consume(msg_size);
   return true;
+}
+
+void Connection::send_msg(const Message& msg) {
+  size_t sz;
+  std::unique_ptr<char[]> data = msg.encode(sz);
+  log->debug("sending message '{}', size={}, addr={}", msg.headers.command, sz,
+             addr_);
+  tcp_->write(std::move(data), sz);
 }
 
 void Connection::send_version(uint64_t nonce, uint64_t services) {
@@ -99,9 +115,6 @@ void Connection::send_version(uint64_t nonce, uint64_t services) {
   ver.nonce = nonce;
   ver.user_agent = SPV_USER_AGENT;
 
-  size_t sz;
-  std::unique_ptr<char[]> data = encode_version(ver, &sz);
-  log->debug("writing {} byte version message to {}", sz, addr_);
-  tcp_->write(std::move(data), sz);
+  send_msg(ver);
 }
 }  // namespace spv

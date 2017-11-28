@@ -24,9 +24,10 @@
 #include "./pow.h"
 #include "./protocol.h"
 
-#define CHECK(x)  \
-  if (!(x)) {     \
-    return false; \
+#define CHECK(x)                                            \
+  if (!(x)) {                                               \
+    decoder_log->warn("CHECK failed on line {}", __LINE__); \
+    return false;                                           \
   }
 
 #define PULL(x) CHECK(pull(x))
@@ -119,6 +120,7 @@ class Decoder {
     uint16_t port;
     PULL(port);
     addr.set_port(be16toh(port));
+    return true;
   }
 
   bool pull_netaddr(VersionNetAddr &addr) {

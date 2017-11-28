@@ -53,6 +53,8 @@ class Connection {
   // read data
   void read(const char* data, size_t sz);
 
+  void send_msg(const Message& msg);
+
   void send_version(uint64_t nonce, uint64_t services);
 
  private:

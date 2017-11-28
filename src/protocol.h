@@ -90,18 +90,26 @@ struct Message {
 
   Message() {}
   explicit Message(const std::string &command) : headers(command) {}
+
+  virtual std::unique_ptr<char[]> encode(size_t &sz) const = 0;
 };
+
+#define FINAL_ENCODE std::unique_ptr<char[]> encode(size_t &sz) const final;
 
 struct Ping : Message {
   uint64_t nonce;
 
-  Ping() : Message("ping"), nonce(0) {}
+  Ping() : Ping(0) {}
+  Ping(uint64_t nonce) : Message("ping"), nonce(nonce) {}
+  FINAL_ENCODE
 };
 
 struct Pong : Message {
   uint64_t nonce;
 
-  Pong() : Message("pong"), nonce(0) {}
+  Pong() : Pong(0) {}
+  Pong(uint64_t nonce) : Message("pong"), nonce(nonce) {}
+  FINAL_ENCODE
 };
 
 struct Version : Message {
@@ -123,9 +131,11 @@ struct Version : Message {
         nonce(0),
         start_height(0),
         relay(0) {}
+  FINAL_ENCODE
 };
 
 struct Verack : Message {
   Verack() : Message("verack") {}
+  FINAL_ENCODE
 };
 }  // namespace spv
