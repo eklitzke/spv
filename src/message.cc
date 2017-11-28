@@ -257,7 +257,7 @@ struct Decoder {
   void pull(Headers &headers) {
     std::array<char, COMMAND_SIZE> cmd_buf{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     pull(headers.magic);
-    if (headers.magic != TESTNET3_MAGIC) {
+    if (headers.magic != PROTOCOL_MAGIC) {
       log->warn("peer sent wrong magic bytes");
     }
     pull_buf(cmd_buf.data(), COMMAND_SIZE);

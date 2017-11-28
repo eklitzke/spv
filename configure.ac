@@ -56,6 +56,9 @@ AS_COMPILER_FLAG([-fdiagnostics-color=auto],
 
 PKG_CHECK_MODULES([libuv], [libuv >= 1])
 
+AC_DEFINE([PROTOCOL_MAGIC], [0x0709110B], [P2P protocol magic.])
+AC_DEFINE([PROTOCOL_PORT], [18333], [P2P protocol port.])
+AC_DEFINE([PROTOCOL_VERSION], [70015], [P2P protocol version.])
 AC_DEFINE([SPV_USER_AGENT], ["github.com/eklitzke/spv"], [User agent to advertise.])
 
 gitcommit=`cd $srcdir && git describe --always`

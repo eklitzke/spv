@@ -21,6 +21,7 @@
 #include <string>
 
 #include "./addr.h"
+#include "./config.h"
 #include "./util.h"
 
 namespace spv {
@@ -35,9 +36,9 @@ struct Headers {
   uint32_t payload_size;
   uint32_t checksum;
 
-  Headers() : magic(TESTNET3_MAGIC), payload_size(0), checksum(0) {}
+  Headers() : magic(PROTOCOL_MAGIC), payload_size(0), checksum(0) {}
   explicit Headers(const std::string &command)
-      : magic(TESTNET3_MAGIC), command(command), payload_size(0), checksum(0) {}
+      : magic(PROTOCOL_MAGIC), command(command), payload_size(0), checksum(0) {}
   Headers(const Headers &other)
       : magic(other.magic),
         command(other.command),

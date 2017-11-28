@@ -16,20 +16,9 @@
 
 #pragma once
 
-#include <cstdint>
-#include <cstring>
-#include <string>
-
-#include "./addr.h"
-#include "./util.h"
+#include "./config.h"
 
 namespace spv {
-// constants related to the protocol itself
-enum {
-  PROTOCOL_VERSION = 70015,
-  TESTNET_PORT = 18333,
-};
-
 // constants related to message headers
 enum {
   HEADER_PADDING = 8,

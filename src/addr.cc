@@ -52,7 +52,7 @@ Addr::Addr(const addrinfo *ai) : af_(ai->ai_family) {
       log->warn("unknown address family {}", ai->ai_addr->sa_family);
       return;
   }
-  uvw_addr_.port = TESTNET_PORT;
+  uvw_addr_.port = PROTOCOL_PORT;
   uvw_addr_.ip = buf;
 }
 
