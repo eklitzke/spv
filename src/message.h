@@ -123,4 +123,8 @@ struct Verack : Message {
   explicit Verack(const Headers &hdrs) : Message(hdrs) {}
   FINAL_ENCODE
 };
+
+class Peer;
+std::unique_ptr<Message> decode_message(const Peer &peer, const char *data,
+                                        size_t size, size_t *bytes_consumed);
 }  // namespace spv

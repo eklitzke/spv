@@ -26,7 +26,6 @@
 #include "./config.h"
 #include "./connection.h"
 #include "./constants.h"
-#include "./encoder.h"
 #include "./logging.h"
 #include "./util.h"
 #include "./uvw.h"

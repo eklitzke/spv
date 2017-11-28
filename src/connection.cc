@@ -16,8 +16,7 @@
 
 #include "./connection.h"
 
-#include "./decoder.h"
-#include "./encoder.h"
+#include "./constants.h"
 #include "./logging.h"
 #include "./message.h"
 
@@ -71,8 +70,8 @@ bool Connection::read_message() {
     } else if (cmd == "pong") {
       // no-op
     } else {
-      // not reached, decoder.cc already check this
-      log->warn("unhandle p2p message type '{}'", cmd);
+      // not reached, decoder should have the logic to check for this
+      log->error("decoder returned unknown p2p message '{}'", cmd);
     }
   }
   return ret;
@@ -81,7 +80,10 @@ bool Connection::read_message() {
 void Connection::send_msg(const Message& msg) {
   size_t sz;
   std::unique_ptr<char[]> data = msg.encode(sz);
-  log->info("sending '{}' to {}, size={}", msg.headers.command, peer_, sz);
+  const std::string& cmd = msg.headers.command;
+  log->info("sending '{}' to {}", cmd, peer_);
+  log->debug("message '{}' to {} will have wire size of {} bytes", cmd, peer_,
+             sz);
   tcp_->write(std::move(data), sz);
 }
 

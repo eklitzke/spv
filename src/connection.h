@@ -22,7 +22,7 @@
 #include "./addr.h"
 #include "./buffer.h"
 #include "./config.h"
-#include "./decoder.h"
+#include "./message.h"
 #include "./peer.h"
 #include "./util.h"
 #include "./uvw.h"

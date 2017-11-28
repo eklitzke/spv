@@ -23,7 +23,6 @@
 
 #include "./client.h"
 #include "./config.h"
-#include "./encoder.h"
 #include "./logging.h"
 #include "./util.h"
 #include "./uvw.h"
