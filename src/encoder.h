@@ -33,8 +33,7 @@
 #include "./protocol.h"
 
 namespace spv {
-class Encoder : public Buffer {
- public:
+struct Encoder : Buffer {
   Encoder() : Buffer() {}
 
   template <typename T>
@@ -129,7 +128,5 @@ class Encoder : public Buffer {
     if (finish) finish_headers();
     return move_buffer(sz);
   }
-
- private:
 };
 }  // namespace spv

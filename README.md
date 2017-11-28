@@ -49,7 +49,7 @@ Build dependencies:
  * autoconf
  * automake
  * pkg-config
- * libuv (version 1.x)
+ * [libuv](https://github.com/libuv/libuv) (version 1.x)
 
 Other dependencies/third party libs; these are all included as git submodules:
 

@@ -17,6 +17,8 @@
 #pragma once
 
 #include <endian.h>
+
+#include <array>
 #include <limits>
 
 #include "./buffer.h"
@@ -40,7 +42,7 @@ class Decoder {
   Decoder() = delete;
   Decoder(const char *data, size_t sz) : data_(data), cap_(sz), off_(0) {}
 
-  inline bool replace(size_t cap) {
+  bool replace(size_t cap) {
     if (cap <= cap_ && cap <= off_) {
       cap_ = cap;
       return true;
@@ -48,7 +50,7 @@ class Decoder {
     return false;
   }
 
-  inline bool pull(char *out, size_t sz) {
+  bool pull(char *out, size_t sz) {
     if (sz + off_ > cap_) {
       decoder_log->debug("failed to pull {} bytes, offset = {}, capacity = {}",
                          sz, off_, cap_);
@@ -59,9 +61,32 @@ class Decoder {
     return true;
   }
 
-  template <typename T>
-  inline bool pull(T &out) {
-    return pull(reinterpret_cast<char *>(&out), sizeof(T));
+  bool pull(uint8_t &out) {
+    return pull(reinterpret_cast<char *>(&out), sizeof out);
+  }
+
+  bool pull(uint16_t &out) {
+    bool ok = pull(reinterpret_cast<char *>(&out), sizeof out);
+    out = le16toh(out);
+    return ok;
+  }
+
+  bool pull(uint32_t &out) {
+    bool ok = pull(reinterpret_cast<char *>(&out), sizeof out);
+    out = le32toh(out);
+    return ok;
+  }
+
+  bool pull(uint64_t &out) {
+    bool ok = pull(reinterpret_cast<char *>(&out), sizeof out);
+    out = le64toh(out);
+    return ok;
+  }
+
+  bool pull_be(uint16_t &out) {
+    bool ok = pull(reinterpret_cast<char *>(&out), sizeof out);
+    out = be16toh(out);
+    return ok;
   }
 
   bool pull_varint(uint64_t &out) {
@@ -102,24 +127,28 @@ class Decoder {
 
   // Caller *must* check the buffer size
   void pull_headers(Headers &headers) {
-    char cmd_buf[COMMAND_SIZE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    std::array<char, COMMAND_SIZE> cmd_buf{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     pull(headers.magic);
     if (headers.magic != TESTNET3_MAGIC) {
       decoder_log->warn("peer sent wrong magic bytes");
     }
-    pull(cmd_buf);
+    pull(cmd_buf.data(), COMMAND_SIZE);
     assert(cmd_buf[COMMAND_SIZE - 1] == '\0');
-    headers.command = cmd_buf;
+    headers.command = cmd_buf.data();
     pull(headers.payload_size);
     pull(headers.checksum);
   }
 
   bool pull_addr(Addr &addr) {
-    char addr_buf[ADDR_SIZE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    PULL(addr_buf);  // TODO: actually use this field
+    // TODO: need to actually use addr_buf
+    std::array<char, ADDR_SIZE> addr_buf{0, 0, 0, 0, 0, 0, 0, 0,
+                                         0, 0, 0, 0, 0, 0, 0, 0};
+    CHECK(pull(addr_buf.data(), ADDR_SIZE));
+
+    // port is in network byte order
     uint16_t port;
-    PULL(port);
-    addr.set_port(be16toh(port));
+    CHECK(pull_be(port));
+    addr.set_port(port);
     return true;
   }
 
