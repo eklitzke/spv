@@ -34,7 +34,8 @@ class Client {
  public:
   Client(uvw::Loop &loop, size_t max_connections)
       : max_connections_(max_connections),
-        connection_nonce_(rand64()),
+        nonce_(rand64()),
+        services_(0),
         loop_(loop) {}
 
   Client() = delete;
@@ -45,7 +46,8 @@ class Client {
 
  private:
   const size_t max_connections_;
-  const uint64_t connection_nonce_;
+  const uint64_t nonce_;
+  const uint64_t services_;
   uvw::Loop &loop_;
   std::unordered_set<Addr> known_peers_;
   std::unordered_set<Connection> connections_;

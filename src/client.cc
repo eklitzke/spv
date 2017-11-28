@@ -78,7 +78,7 @@ void Client::connect_to_peers() {
 void Client::connect_to_peer(const Addr &addr) {
   log->debug("connecting to peer {}", addr);
 
-  auto pr = connections_.emplace(addr, loop_);
+  auto pr = connections_.emplace(addr, loop_, nonce_, services_);
   assert(pr.second);
   Connection &conn = const_cast<Connection &>(*pr.first);
 
@@ -105,7 +105,7 @@ void Client::connect_to_peer(const Addr &addr) {
     log->info("connected to new peer {}", addr);
     cancel_timer();
     conn->read();
-    conn.send_version(connection_nonce_, 0);
+    conn.send_version();
   });
   conn->once<uvw::EndEvent>([=, &conn](const auto &, auto &c) {
     log->info("remote peer {} closed connection", addr);

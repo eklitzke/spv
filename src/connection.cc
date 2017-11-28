@@ -77,6 +77,9 @@ bool Connection::read_message() {
     Version version;
     PULL_MSG(version);
     if (ok) {
+      their_nonce_ = version.nonce;
+      their_services_ = version.services;
+
       Verack ack;
       send_msg(ack);
     }
@@ -106,13 +109,13 @@ void Connection::send_msg(const Message& msg) {
   tcp_->write(std::move(data), sz);
 }
 
-void Connection::send_version(uint64_t nonce, uint64_t services) {
+void Connection::send_version() {
   Version ver;
   ver.version = PROTOCOL_VERSION;
-  ver.services = services;
+  ver.services = services_;
   ver.timestamp = time32();
   ver.addr_recv.addr = addr_;
-  ver.nonce = nonce;
+  ver.nonce = nonce_;
   ver.user_agent = SPV_USER_AGENT;
 
   send_msg(ver);

@@ -29,12 +29,12 @@ namespace spv {
 class Connection {
  public:
   Connection() = delete;
-  Connection(Addr addr, uvw::Loop& loop)
+  Connection(Addr addr, uvw::Loop& loop, uint64_t nonce, uint64_t services)
       : addr_(addr),
         tcp_(loop.resource<uvw::TcpHandle>()),
-        our_nonce_(0),
+        nonce_(nonce),
+        services_(services),
         their_nonce_(0),
-        our_services_(0),
         their_services_(0) {}
   Connection(const Connection& other) = delete;
 
@@ -53,20 +53,24 @@ class Connection {
   // read data
   void read(const char* data, size_t sz);
 
-  void send_msg(const Message& msg);
-
-  void send_version(uint64_t nonce, uint64_t services);
+  void send_version();
 
  private:
   Addr addr_;
   Buffer buf_;
   std::shared_ptr<uvw::TcpHandle> tcp_;
 
-  uint64_t our_nonce_, their_nonce_;
-  uint64_t our_services_, their_services_;
+  // our nonce and services
+  uint64_t nonce_, services_;
+
+  // theirs
+  uint64_t their_nonce_, their_services_;
 
   // returns true if a message was actually read
   bool read_message();
+
+  // send a message to our peer
+  void send_msg(const Message& msg);
 };
 }  // namespace spv
 
