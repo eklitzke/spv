@@ -76,31 +76,42 @@ struct Headers {
 
 struct VersionNetAddr {
   VERSION_FIELDS
+
+  VersionNetAddr() : services(0), port(0) {
+    std::memset(&addr, 0, sizeof addr);
+  }
 };
 
 struct NetAddr {
   uint32_t time;
   VERSION_FIELDS
-};
 
-enum {
-  VERSION_NETADDR_SIZE = 26,
-  NETADDR_SIZE = 30,
+  NetAddr() : time(0), services(0), port(0) {
+    std::memset(&addr, 0, sizeof addr);
+  }
 };
 
 struct Message {
   Headers headers;
 
   Message() = delete;
-  Message(const Headers &hdrs) : headers(hdrs) {}
+
+ protected:
+  explicit Message(const Headers &hdrs) : headers(hdrs) {}
 };
 
 struct Ping : Message {
   uint64_t nonce;
+
+  Ping() = delete;
+  Ping(const Headers &hdrs, uint64_t nonce = 0) : Message(hdrs), nonce(nonce) {}
 };
 
 struct Pong : Message {
   uint64_t nonce;
+
+  Pong() = delete;
+  Pong(const Headers &hdrs, uint64_t nonce = 0) : Message(hdrs), nonce(nonce) {}
 };
 
 struct Version : Message {
@@ -115,11 +126,18 @@ struct Version : Message {
   uint8_t relay;
 
   Version() = delete;
-  Version(const Headers &hdrs) : Message(hdrs) {}
+  explicit Version(const Headers &hdrs)
+      : Message(hdrs),
+        version(0),
+        services(0),
+        timestamp(0),
+        nonce(0),
+        start_height(0),
+        relay(0) {}
 };
 
 struct Verack : Message {
   Verack() = delete;
-  Verack(const Headers &hdrs) : Message(hdrs) {}
+  explicit Verack(const Headers &hdrs) : Message(hdrs) {}
 };
 }  // namespace spv

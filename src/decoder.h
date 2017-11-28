@@ -19,24 +19,45 @@
 #include <endian.h>
 #include <limits>
 
+#include "./logging.h"
+#include "./pow.h"
 #include "./protocol.h"
-#include "./reader.h"
 
 #define CHECK(x)  \
   if (!(x)) {     \
     return false; \
   }
 
+#define CHECK_PRE assert(off_ == HEADER_SIZE)
+#define CHECK_POST           \
+  CHECK(check_checksum(msg)) \
+  return true;
+
 #define PULL(x) CHECK(pull(x))
-#define PULL_SZ(x, sz) CHECK(pull(x, sz))
 
 namespace spv {
 EXTERN_LOGGER(decoder)
 
-class Decoder : public Reader {
+class Decoder {
  public:
   Decoder() = delete;
-  Decoder(const char *data, size_t sz) : Reader(data, sz) {}
+  Decoder(const char *data, size_t sz) : data_(data), cap_(sz), off_(0) {}
+
+  inline bool pull(char *out, size_t sz) {
+    if (sz + off_ > cap_) {
+      decoder_log->debug("failed to pull {} bytes, offset = {}, capacity = {}",
+                         sz, off_, cap_);
+      return false;
+    }
+    memmove(out, data_ + off_, sz);
+    off_ += sz;
+    return true;
+  }
+
+  template <typename T>
+  inline bool pull(T &out) {
+    return pull(reinterpret_cast<char *>(&out), sizeof(T));
+  }
 
   bool pull_varint(uint64_t &out) {
     uint8_t prefix;
@@ -70,7 +91,7 @@ class Decoder : public Reader {
     CHECK(pull_varint(sz));
     assert(sz <= std::numeric_limits<uint16_t>::max());
     out.append(data(), sz);
-    advance(sz);
+    off_ += sz;
     return true;
   }
 
@@ -93,19 +114,36 @@ class Decoder : public Reader {
   }
 
   bool pull_netaddr(VersionNetAddr &addr) {
-    PULL_SZ(addr, VERSION_NETADDR_SIZE);
+    PULL(addr.services);
+    PULL(addr.addr);
+    PULL(addr.port);
     addr.port = be16toh(addr.port);  // TODO: convert ip as well
     return true;
   }
 
   bool pull_netaddr(NetAddr &addr) {
-    PULL_SZ(addr, NETADDR_SIZE);
+    PULL(addr.time);
+    PULL(addr.services);
+    PULL(addr.addr);
+    PULL(addr.port);
     addr.port = be16toh(addr.port);  // TODO: convert ip as well
     return true;
   }
 
+  bool pull_ping(Ping &msg) {
+    CHECK_PRE;
+    PULL(msg.nonce);
+    CHECK_POST;
+  }
+
+  bool pull_pong(Pong &msg) {
+    CHECK_PRE;
+    PULL(msg.nonce);
+    CHECK_POST;
+  }
+
   bool pull_version(Version &msg) {
-    assert(offset() == HEADER_SIZE);
+    CHECK_PRE;
     PULL(msg.version);
     PULL(msg.services);
     PULL(msg.timestamp);
@@ -118,6 +156,28 @@ class Decoder : public Reader {
       if (msg.version >= 70001) {
         CHECK(pull(msg.relay));
       }
+    }
+    CHECK_POST;
+  }
+
+  bool pull_verack(Verack &msg) {
+    CHECK_PRE;
+    CHECK_POST;
+  }
+
+  inline size_t bytes_read() const { return off_; }
+  inline const char *data() const { return data_ + off_; }
+
+ private:
+  const char *data_;
+  size_t cap_;
+  size_t off_;
+
+  inline bool check_checksum(const Message &msg) {
+    uint32_t cksum = checksum(data_ + HEADER_SIZE, off_ - HEADER_SIZE);
+    if (cksum != msg.headers.checksum) {
+      decoder_log->warn("invalid checksum!");
+      return false;
     }
     return true;
   }

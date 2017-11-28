@@ -21,6 +21,7 @@
 
 #include "./addr.h"
 #include "./buffer.h"
+#include "./decoder.h"
 #include "./uvw.h"
 
 namespace spv {
@@ -60,6 +61,10 @@ class Connection {
 
   uint64_t our_nonce_, their_nonce_;
   uint64_t our_services_, their_services_;
+
+  inline void consume(const Decoder& dec) {
+    read_buf_.consume(dec.bytes_read());
+  }
 };
 }  // namespace spv
 

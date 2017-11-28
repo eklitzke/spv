@@ -14,11 +14,25 @@
 // You should have received a copy of the GNU General Public License along with
 // SPV. If not, see <http://www.gnu.org/licenses/>.
 
-#include "./logging.h"
+#include "./pow.h"
 
-#define DEFINE_LOGGER(name, tag) \
-  std::shared_ptr<spdlog::logger> name##_log = spdlog::stdout_color_st(tag);
+#include <cstring>
+
+#include "PicoSHA2/picosha2.h"
 
 namespace spv {
-DEFINE_LOGGER(decoder, "decoder.h")
+void checksum(const char *data, size_t sz, std::array<char, 4> &out) {
+  std::array<unsigned char, 32> hash1, hash2;
+  picosha2::hash256(data, data + sz, hash1);
+  picosha2::hash256(hash1, hash2);
+  std::memcpy(out.data(), hash2.data(), 4);
+}
+
+uint32_t checksum(const char *data, size_t sz) {
+  std::array<char, 4> arr;
+  checksum(data, sz, arr);
+  uint32_t out;
+  std::memmove(&out, arr.data(), sizeof out);
+  return out;
+}
 }  // namespace spv

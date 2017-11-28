@@ -29,7 +29,7 @@ class Buffer {
   Buffer() : Buffer(64) {}
   explicit Buffer(size_t cap)
       : capacity_(cap), size_(0), data_(new char[cap]) {}
-  Buffer(const Buffer &othere) = delete;
+  Buffer(const Buffer &other) = delete;
   Buffer(Buffer &&other)
       : capacity_(other.capacity_),
         size_(other.size_),
@@ -68,13 +68,6 @@ class Buffer {
   inline size_t size() const { return size_; }
   inline const char *data() const { return data_.get(); }
 
-  std::unique_ptr<char[]> move_buffer(size_t *sz) {
-    *sz = size_;
-    size_ = 0;
-    capacity_ = 0;
-    return std::move(data_);
-  }
-
   void consume(size_t sz) {
     assert(size_ >= sz);
     std::memcpy(data_.get(), data_.get() + sz, size_ - sz);
@@ -98,6 +91,14 @@ class Buffer {
       data_.reset(new_data);
       capacity_ = new_capacity;
     }
+  }
+
+ protected:
+  std::unique_ptr<char[]> move_buffer(size_t *sz) {
+    *sz = size_;
+    size_ = 0;
+    capacity_ = 0;
+    return std::move(data_);
   }
 };
 }  // namespace spv

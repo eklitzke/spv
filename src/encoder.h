@@ -38,14 +38,16 @@ static_assert(sizeof(in6_addr) == 16);
 static_assert(IPV4_PADDING == 12);
 
 // Encoder can encode data.
-class Encoder {
+class Encoder : public Buffer {
  public:
-  Encoder() {}
-  explicit Encoder(const std::string &command) { push_headers(command); }
+  Encoder() : Buffer() {}
+  explicit Encoder(const std::string &command) : Buffer() {
+    push_headers(command);
+  }
 
   template <typename T>
   void push_int(T val) {
-    buf_.append(&val, sizeof val);
+    append(&val, sizeof val);
   }
 
   inline void push_byte(uint8_t val) { return push_int<uint8_t>(val); }
@@ -60,7 +62,7 @@ class Encoder {
 
   inline void push_string(const std::string &s) {
     push_varint(s.size());
-    buf_.append(s.c_str(), s.size());
+    append(s.c_str(), s.size());
   }
 
   void push_varint(size_t val);
@@ -78,29 +80,27 @@ class Encoder {
   void push_headers(const std::string &command,
                     uint32_t magic = TESTNET3_MAGIC);
 
-  std::unique_ptr<char[]> move_buffer(size_t *sz, bool finish = true) {
+  std::unique_ptr<char[]> serialize(size_t *sz, bool finish = true) {
     if (finish) finish_headers();
-    return buf_.move_buffer(sz);
+    return move_buffer(sz);
   }
 
  private:
-  void push_bytes(const void *addr, size_t len) { buf_.append(addr, len); }
+  void push_bytes(const void *addr, size_t len) { append(addr, len); }
   void finish_headers();
 
   inline void push_ipv4(const in_addr &addr) {
-    buf_.append_zeros(IPV4_PADDING);
-    buf_.append(&addr.s_addr, sizeof addr);
+    append_zeros(IPV4_PADDING);
+    append(&addr.s_addr, sizeof addr);
   }
 
   inline void push_ipv6(const in6_addr &addr) {
-    buf_.append(&addr.s6_addr, sizeof addr);
+    append(&addr.s6_addr, sizeof addr);
   }
 
   inline void push_port(uint16_t port) {
     uint16_t be_port = htobe16(port);
-    buf_.append(&be_port, sizeof be_port);
+    append(&be_port, sizeof be_port);
   }
-
-  Buffer buf_;
 };
 }  // namespace spv

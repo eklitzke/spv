@@ -43,13 +43,28 @@ void Connection::read(const char* data, size_t sz) {
   if (command == "version") {
     Version ver(hdrs);
     if (dec.pull_version(ver)) {
-      read_buf_.consume(dec.bytes_read());
+      consume(dec);
       log->info("peer sent us version {}, agent = {}", ver.version,
                 ver.user_agent);
     }
   } else if (command == "verack") {
     Verack ack(hdrs);
-    log->info("peer sent us verack message");
+    if (dec.pull_verack(ack)) {
+      consume(dec);
+      log->info("peer sent us verack message");
+    }
+  } else if (command == "ping") {
+    Ping ping(hdrs);
+    if (dec.pull_ping(ping)) {
+      consume(dec);
+      log->info("peer sent us ping message");
+    }
+  } else if (command == "pong") {
+    Pong pong(hdrs);
+    if (dec.pull_pong(pong)) {
+      consume(dec);
+      log->info("peer sent us pong message");
+    }
   }
 }
 
@@ -69,7 +84,7 @@ void Connection::send_version(uint64_t nonce, uint64_t services) {
   enc.push_bool(true);                       // relay
 
   size_t sz;
-  std::unique_ptr<char[]> data = enc.move_buffer(&sz);
+  std::unique_ptr<char[]> data = enc.serialize(&sz);
   log->debug("writing {} byte version message to {}", sz, addr_);
   tcp_->write(std::move(data), sz);
 }
