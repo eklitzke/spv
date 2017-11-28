@@ -34,6 +34,8 @@
 
 #define PULL(x) CHECK(pull(x))
 
+#define PULL_BUF(x, y) CHECK(pull_buf(x, y))
+
 namespace spv {
 EXTERN_LOGGER(decoder)
 
@@ -50,30 +52,33 @@ class Decoder {
     return false;
   }
 
-  bool pull(uint8_t &out) { return pull(&out, sizeof out); }
+  bool pull(uint8_t &out) {
+    PULL_BUF(&out, sizeof out);
+    return true;
+  }
 
   bool pull(uint16_t &out) {
-    bool ok = pull(&out, sizeof out);
+    PULL_BUF(&out, sizeof out);
     out = le16toh(out);
-    return ok;
+    return true;
   }
 
   bool pull(uint32_t &out) {
-    bool ok = pull(&out, sizeof out);
+    PULL_BUF(&out, sizeof out);
     out = le32toh(out);
-    return ok;
+    return true;
   }
 
   bool pull(uint64_t &out) {
-    bool ok = pull(&out, sizeof out);
+    PULL_BUF(&out, sizeof out);
     out = le64toh(out);
-    return ok;
+    return true;
   }
 
   bool pull_be(uint16_t &out) {
-    bool ok = pull(&out, sizeof out);
+    PULL_BUF(&out, sizeof out);
     out = be16toh(out);
-    return ok;
+    return true;
   }
 
   bool pull(std::string &out) {
@@ -91,7 +96,7 @@ class Decoder {
     if (headers.magic != TESTNET3_MAGIC) {
       decoder_log->warn("peer sent wrong magic bytes");
     }
-    CHECK(pull(cmd_buf.data(), COMMAND_SIZE));
+    PULL_BUF(cmd_buf.data(), COMMAND_SIZE);
     CHECK(cmd_buf[COMMAND_SIZE - 1] == '\0');
     headers.command = cmd_buf.data();
     PULL(headers.payload_size);
@@ -103,7 +108,7 @@ class Decoder {
     // TODO: need to actually use addr_buf
     std::array<char, ADDR_SIZE> addr_buf{0, 0, 0, 0, 0, 0, 0, 0,
                                          0, 0, 0, 0, 0, 0, 0, 0};
-    CHECK(pull(addr_buf.data(), ADDR_SIZE));
+    PULL_BUF(addr_buf.data(), ADDR_SIZE);
 
     // port is in network byte order
     uint16_t port;
@@ -175,7 +180,7 @@ class Decoder {
   size_t cap_;
   size_t off_;
 
-  bool pull(void *out, size_t sz) {
+  inline bool pull_buf(void *out, size_t sz) {
     if (sz + off_ > cap_) {
       decoder_log->debug("failed to pull {} bytes, offset = {}, capacity = {}",
                          sz, off_, cap_);
@@ -186,7 +191,7 @@ class Decoder {
     return true;
   }
 
-  bool pull_varint(uint64_t &out) {
+  inline bool pull_varint(uint64_t &out) {
     uint8_t prefix;
     PULL(prefix);
     if (prefix < 0xfd) {
