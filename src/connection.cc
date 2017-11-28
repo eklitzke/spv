@@ -43,7 +43,7 @@ bool Connection::read_message() {
   bool ret = false;
   size_t bytes_consumed = 0;
   std::unique_ptr<Message> msg =
-      decode_message(peer_, buf_.data(), buf_.size(), &bytes_consumed);
+      decode_message(buf_.data(), buf_.size(), &bytes_consumed);
   if (bytes_consumed != 0) {
     ret = true;
     buf_.consume(bytes_consumed);
