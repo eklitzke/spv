@@ -27,8 +27,9 @@ namespace spv {
 class Buffer {
  public:
   Buffer() : Buffer(64) {}
-  explicit Buffer(size_t cap)
-      : capacity_(cap), size_(0), data_(new char[cap]) {}
+  explicit Buffer(size_t cap) : capacity_(cap), size_(0), data_(new char[cap]) {
+    std::memset(data_.get(), 0, cap);
+  }
   Buffer(const Buffer &other) = delete;
   Buffer(Buffer &&other)
       : capacity_(other.capacity_),
@@ -38,7 +39,7 @@ class Buffer {
   // append data
   void append(const void *addr, size_t len) {
     ensure_capacity(len);
-    memmove(data_.get() + static_cast<ptrdiff_t>(size_), addr, len);
+    std::memmove(data_.get() + static_cast<ptrdiff_t>(size_), addr, len);
     size_ += len;
   }
 
@@ -55,14 +56,14 @@ class Buffer {
   // append zeros
   void append_zeros(size_t len) {
     ensure_capacity(len);
-    memset(data_.get() + static_cast<ptrdiff_t>(size_), 0, len);
+    std::memset(data_.get() + static_cast<ptrdiff_t>(size_), 0, len);
     size_ += len;
   }
 
   // insert directly into the middle of the buffer
   void insert(const void *addr, size_t len, size_t offset) {
     assert(offset + len <= size_);
-    memmove(data_.get() + offset, addr, len);
+    std::memmove(data_.get() + offset, addr, len);
   }
 
   inline size_t size() const { return size_; }
@@ -85,10 +86,12 @@ class Buffer {
     while (size_ + len > new_capacity) {
       new_capacity *= 2;
     }
-    if (new_capacity > capacity_) {
-      char *new_data = new char[new_capacity];
-      memmove(new_data, data_.get(), capacity_);
-      data_.reset(new_data);
+    const size_t extra = new_capacity - capacity_;
+    if (extra) {
+      std::unique_ptr<char[]> new_data(new char[new_capacity]);
+      std::memmove(new_data.get(), data_.get(), capacity_);
+      std::memset(new_data.get() + capacity_, 0, extra);
+      data_ = std::move(new_data);
       capacity_ = new_capacity;
     }
   }
