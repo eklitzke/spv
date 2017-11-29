@@ -66,6 +66,8 @@ bool Connection::read_message() {
       for (const auto& addr : addrs->addrs) {
         log->debug("peer sent us new addr {}", addr.addr);
       }
+    } else if (cmd == "getaddr") {
+      log->debug("ignoring getaddr");
     } else if (cmd == "getblocks") {
       log->debug("ignoring getblocks");
     } else if (cmd == "getheaders") {

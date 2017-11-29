@@ -39,8 +39,11 @@
 namespace spv {
 MODULE_LOGGER
 
-struct Encoder : Buffer {
-  Encoder() : Buffer() {}
+class Encoder : public Buffer {
+ public:
+  Encoder() = delete;
+  Encoder(const Encoder &other) = delete;
+  explicit Encoder(const Headers &headers) : Buffer() { push(headers); }
 
   template <typename T>
   void push_int(T val) {
@@ -64,13 +67,6 @@ struct Encoder : Buffer {
   void push(uint64_t val) {
     uint64_t enc_val = htole64(val);
     append(&enc_val, sizeof enc_val);
-  }
-
-  void push(const Headers &headers) {
-    push(headers.magic);
-    append_string(headers.command, COMMAND_SIZE);
-    push(headers.payload_size);
-    push(headers.checksum);
   }
 
   // push in network byte order
@@ -136,10 +132,18 @@ struct Encoder : Buffer {
     if (finish) finish_headers();
     return move_buffer(sz);
   }
+
+ private:
+  void push(const Headers &headers) {
+    push(headers.magic);
+    append_string(headers.command, COMMAND_SIZE);
+    push(headers.payload_size);
+    push(headers.checksum);
+  }
 };
 
 DECLARE_ENCODE(AddrMsg) {
-  Encoder enc;
+  Encoder enc(headers);
   enc.push_varint(addrs.size());
   for (const auto &addr : addrs) {
     enc.push(addr);
@@ -147,8 +151,13 @@ DECLARE_ENCODE(AddrMsg) {
   return enc.serialize(sz);
 }
 
+DECLARE_ENCODE(GetAddr) {
+  Encoder enc(headers);
+  return enc.serialize(sz);
+}
+
 DECLARE_ENCODE(GetBlocks) {
-  Encoder enc;
+  Encoder enc(headers);
   enc.push(version);
   enc.push_varint(block_locators.size());
   for (const auto &locator : block_locators) {
@@ -159,7 +168,7 @@ DECLARE_ENCODE(GetBlocks) {
 }
 
 DECLARE_ENCODE(GetHeaders) {
-  Encoder enc;
+  Encoder enc(headers);
   enc.push(version);
   enc.push_varint(block_locators.size());
   for (const auto &locator : block_locators) {
@@ -170,34 +179,29 @@ DECLARE_ENCODE(GetHeaders) {
 }
 
 DECLARE_ENCODE(Ping) {
-  Encoder enc;
-  enc.push(headers);
+  Encoder enc(headers);
   enc.push(nonce);
   return enc.serialize(sz);
 }
 
 DECLARE_ENCODE(Pong) {
-  Encoder enc;
-  enc.push(headers);
+  Encoder enc(headers);
   enc.push(nonce);
   return enc.serialize(sz);
 }
 
 DECLARE_ENCODE(SendHeaders) {
-  Encoder enc;
-  enc.push(headers);
+  Encoder enc(headers);
   return enc.serialize(sz);
 }
 
 DECLARE_ENCODE(VerAck) {
-  Encoder enc;
-  enc.push(headers);
+  Encoder enc(headers);
   return enc.serialize(sz);
 }
 
 DECLARE_ENCODE(Version) {
-  Encoder enc;
-  enc.push(headers);
+  Encoder enc(headers);
   enc.push(version);
   enc.push(services);
   enc.push(timestamp);

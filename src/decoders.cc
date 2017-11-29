@@ -242,7 +242,11 @@ DECLARE_PARSER(addr, [](auto &dec, const auto &hdrs) {
   return msg;
 });
 
-DECLARE_PARSER(get_blocks, [](auto &dec, const auto &hdrs) {
+DECLARE_PARSER(getaddr, [](auto &dec, const auto &hdrs) {
+  return std::make_unique<GetAddr>(hdrs);
+});
+
+DECLARE_PARSER(getblocks, [](auto &dec, const auto &hdrs) {
   auto msg = std::make_unique<GetBlocks>(hdrs);
   dec.pull(msg->version);
   uint64_t count;
@@ -262,7 +266,7 @@ DECLARE_PARSER(get_blocks, [](auto &dec, const auto &hdrs) {
   return msg;
 });
 
-DECLARE_PARSER(get_headers, [](auto &dec, const auto &hdrs) {
+DECLARE_PARSER(getheaders, [](auto &dec, const auto &hdrs) {
   auto msg = std::make_unique<GetHeaders>(hdrs);
   dec.pull(msg->version);
   uint64_t count;
@@ -295,13 +299,11 @@ DECLARE_PARSER(pong, [](auto &dec, const auto &hdrs) {
 });
 
 DECLARE_PARSER(sendheaders, [](auto &dec, const auto &hdrs) {
-  auto msg = std::make_unique<SendHeaders>(hdrs);
-  return msg;
+  return std::make_unique<SendHeaders>(hdrs);
 });
 
 DECLARE_PARSER(verack, [](auto &dec, const auto &hdrs) {
-  auto msg = std::make_unique<VerAck>(hdrs);
-  return msg;
+  return std::make_unique<VerAck>(hdrs);
 });
 
 DECLARE_PARSER(version, [](auto &dec, const auto &hdrs) {

@@ -98,6 +98,12 @@ struct AddrMsg : Message {
   FINAL_ENCODE
 };
 
+struct GetAddr : Message {
+  GetAddr() : GetAddr(Headers("getaddr")) {}
+  explicit GetAddr(const Headers &hdrs) : Message(hdrs) {}
+  FINAL_ENCODE
+};
+
 struct GetBlocks : Message {
   uint32_t version;
   size_t hash_count;
