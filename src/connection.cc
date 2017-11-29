@@ -144,7 +144,8 @@ void Connection::handle_mempool(Mempool* pool) {
 }
 
 void Connection::handle_inv(Inv* inv) {
-  log->info("inv message with type", inv->type);
+  log->info("inv message with type {}, hash {}", inv->type,
+            array_to_hex(inv->hash));
 }
 
 void Connection::handle_ping(Ping* ping) {
