@@ -58,6 +58,7 @@ AS_COMPILER_FLAG([-fdiagnostics-color=auto],
 
 PKG_CHECK_MODULES([libuv], [libuv >= 1])
 
+AC_DEFINE_UNQUOTED([USER_AGENT], ["eklitzke/$PACKAGE_STRING"], [Our user agent.])
 AC_DEFINE([PROTOCOL_MAGIC], [0x0709110B], [P2P protocol magic.])
 AC_DEFINE([PROTOCOL_PORT], [18333], [P2P protocol port.])
 

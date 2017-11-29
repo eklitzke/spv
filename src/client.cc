@@ -33,7 +33,7 @@ static const std::vector<std::string> testSeeds = {
 };
 
 void Client::run() {
-  log->info("connecting to network as: {}", us_.user_agent);
+  log->debug("connecting to network as {}", us_.user_agent);
   for (const auto &seed : testSeeds) {
     lookup_seed(seed);
   }
