@@ -52,11 +52,11 @@ int main(int argc, char** argv) {
         spdlog::set_level(spdlog::level::debug);
         break;
       case 'h':
-        std::cout << SPV_VERSION_STR << "\n\n" << usage_str;
+        std::cout << PACKAGE_STRING << "\n\n" << usage_str;
         return 0;
         break;
       case 'v':
-        std::cout << SPV_VERSION_STR << "\n";
+        std::cout << PACKAGE_STRING << "\n";
         return 0;
         break;
       case '?':

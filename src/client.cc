@@ -18,6 +18,7 @@
 
 #include <cassert>
 
+#include "./config.h"
 #include "./logging.h"
 
 namespace spv {
@@ -32,6 +33,7 @@ static const std::vector<std::string> testSeeds = {
 };
 
 void Client::run() {
+  log->info("connecting to network as: {}", us_.user_agent);
   for (const auto &seed : testSeeds) {
     lookup_seed(seed);
   }

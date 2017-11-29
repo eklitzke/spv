@@ -60,20 +60,9 @@ PKG_CHECK_MODULES([libuv], [libuv >= 1])
 
 AC_DEFINE([PROTOCOL_MAGIC], [0x0709110B], [P2P protocol magic.])
 AC_DEFINE([PROTOCOL_PORT], [18333], [P2P protocol port.])
-AC_DEFINE([SPV_USER_AGENT], ["github.com/eklitzke/spv"], [User agent to advertise.])
 
 # See https://bitcoin.org/en/developer-reference#protocol-versions for the meaning of this
 AC_DEFINE([PROTOCOL_VERSION], [70012], [P2P protocol version.])
-
-gitcommit=`cd $srcdir && git describe --always`
-AS_IF([test x"$gitcommit" = x],
-      [versionstr="spv $PACKAGE_VERSION $host_os $host_cpu"],
-      [versionstr="spv $PACKAGE_VERSION (commit $gitcommit) $host_os $host_cpu"])
-
-AC_DEFINE_UNQUOTED(
-  [SPV_VERSION_STR],
-  ["$versionstr"],
-  [A string containing build information.])
 
 AC_CONFIG_FILES([Makefile
                  src/Makefile])
