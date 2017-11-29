@@ -57,6 +57,8 @@ struct Decoder {
     off_ = 0;
   }
 
+  inline size_t bytes_remaining() { return cap_ - off_; }
+
   bool validate_msg(const Message *msg) {
     if (msg == nullptr) {
       return false;
@@ -131,6 +133,12 @@ struct Decoder {
   void pull_be(uint16_t &out) {
     pull_buf(&out, sizeof out);
     out = be16toh(out);
+  }
+
+  void pull(CCode &ccode) {
+    uint8_t int_code;
+    pull(int_code);
+    ccode = static_cast<CCode>(int_code);
   }
 
   void pull(std::string &out) {
@@ -295,6 +303,30 @@ DECLARE_PARSER(ping, [](auto &dec, const auto &hdrs) {
 DECLARE_PARSER(pong, [](auto &dec, const auto &hdrs) {
   auto msg = std::make_unique<Pong>(hdrs);
   dec.pull(msg->nonce);
+  return msg;
+});
+
+DECLARE_PARSER(reject, [](auto &dec, const auto &hdrs) {
+  auto msg = std::make_unique<Reject>(hdrs);
+  dec.pull(msg->message);
+  dec.pull(msg->ccode);
+  dec.pull(msg->reason);
+  const size_t remaining = dec.bytes_remaining();
+  switch (remaining) {
+    case 0:
+      return msg;
+    case sizeof(hash_t):
+      dec.pull(msg->data);
+      return msg;
+    default: {
+      std::ostringstream os;
+      os << "unable to decode reject message with " << remaining
+         << " data bytes";
+      throw BadMessage(os.str());
+    }
+  }
+  // this branch not reached
+  assert(false);
   return msg;
 });
 

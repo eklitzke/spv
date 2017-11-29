@@ -75,6 +75,8 @@ class Encoder : public Buffer {
     append(&enc_val, sizeof enc_val);
   }
 
+  void push(CCode ccode) { push(static_cast<uint8_t>(ccode)); }
+
   void push(const Addr &addr) {
     addrbuf_t buf;
     addr.encode_addrbuf(buf);
@@ -129,7 +131,9 @@ class Encoder : public Buffer {
   }
 
   std::unique_ptr<char[]> serialize(size_t &sz, bool finish = true) {
-    if (finish) finish_headers();
+    if (finish) {
+      finish_headers();
+    }
     return move_buffer(sz);
   }
 
@@ -187,6 +191,17 @@ DECLARE_ENCODE(Ping) {
 DECLARE_ENCODE(Pong) {
   Encoder enc(headers);
   enc.push(nonce);
+  return enc.serialize(sz);
+}
+
+DECLARE_ENCODE(Reject) {
+  Encoder enc(headers);
+  enc.push(message);
+  enc.push(ccode);
+  enc.push(reason);
+  if (data != empty_hash) {
+    enc.push(data);
+  }
   return enc.serialize(sz);
 }
 

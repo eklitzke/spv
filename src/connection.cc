@@ -60,7 +60,7 @@ bool Connection::read_message() {
 
   if (msg.get() != nullptr) {
     const std::string& cmd = msg->headers.command;
-    log->info("got message '{}' from peer {}", cmd, peer_);
+    log->info("message '{}' from peer {}", cmd, peer_);
     if (cmd == "addr") {
       AddrMsg* addrs = dynamic_cast<AddrMsg*>(msg.get());
       for (const auto& addr : addrs->addrs) {
@@ -93,6 +93,11 @@ bool Connection::read_message() {
       send_msg(pong);
     } else if (cmd == "pong") {
       log->debug("ignoring pong");
+    } else if (cmd == "reject") {
+      Reject* rej = dynamic_cast<Reject*>(msg.get());
+      uint8_t ccode = static_cast<uint8_t>(rej->ccode);
+      log->error("peer {} sent us reject: message={}, ccode={}, reason={}",
+                 peer_, rej->message, ccode, rej->reason);
     } else if (cmd == "sendheaders") {
       log->debug("ignoring sendheaders");
     } else {

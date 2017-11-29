@@ -25,6 +25,6 @@ std::ostream& operator<<(std::ostream& o, const spv::Peer& p) {
   if (!p.user_agent.empty()) {
     o << " " << p.user_agent;
   }
-  o << " version " << p.version;
+  o << " v" << p.version;
   return o;
 }

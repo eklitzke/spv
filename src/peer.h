@@ -30,7 +30,8 @@ struct Peer {
   Addr addr;
 
   Peer() : nonce(0), services(0), version(0) {}
-  explicit Peer(const Addr& addr) : addr(addr) {}
+  explicit Peer(const Addr& addr)
+      : nonce(0), services(0), version(0), addr(addr) {}
   Peer(uint32_t n, uint32_t s, uint32_t v, const std::string& ua)
       : nonce(n), services(s), version(v), user_agent(ua) {}
   Peer(const Peer& other)

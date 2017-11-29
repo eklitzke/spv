@@ -144,6 +144,28 @@ struct Pong : Message {
   FINAL_ENCODE
 };
 
+enum class CCode : uint8_t {
+  MALFORMED = 0x1,
+  INVALID = 0x10,
+  OBSOLETE = 0x11,
+  DUPLICATE = 0x12,
+  NONSTANDARD = 0x40,
+  DUST = 0x41,
+  INSUFFICIENT_FEE = 0x42,
+  CHECKPOINT = 0x43,
+};
+
+struct Reject : Message {
+  std::string message;
+  CCode ccode;
+  std::string reason;
+  hash_t data;  // optional
+
+  Reject() : Reject(Headers("reject")) {}
+  explicit Reject(const Headers &hdrs) : Message(hdrs) {}
+  FINAL_ENCODE
+};
+
 struct SendHeaders : Message {
   SendHeaders() : SendHeaders(Headers("sendheaders")) {}
   explicit SendHeaders(const Headers &hdrs) : Message(hdrs) {}
