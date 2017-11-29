@@ -192,6 +192,11 @@ struct Decoder {
   }
 
   void pull(hash_t &hash) { pull_buf(hash.data(), sizeof hash); }
+
+  void pull(Inv &inv) {
+    pull(inv.type);
+    pull(inv.hash);
+  }
 };
 
 typedef std::function<std::unique_ptr<Message>(Decoder &, const Headers &)>

@@ -25,59 +25,10 @@
 #include "./addr.h"
 #include "./config.h"
 #include "./constants.h"
+#include "./fields.h"
 #include "./util.h"
 
 namespace spv {
-struct Headers {
-  uint32_t magic;
-  std::string command;
-  uint32_t payload_size;
-  uint32_t checksum;
-
-  Headers() : magic(PROTOCOL_MAGIC), payload_size(0), checksum(0) {}
-  explicit Headers(const std::string &command)
-      : magic(PROTOCOL_MAGIC), command(command), payload_size(0), checksum(0) {}
-  Headers(const Headers &other)
-      : magic(other.magic),
-        command(other.command),
-        payload_size(other.payload_size),
-        checksum(other.checksum) {}
-};
-
-struct BlockHeader {
-  uint32_t version;  // supposed to be signed, but who cares
-  hash_t prev_block;
-  hash_t merkle_root;
-  uint32_t timestamp;
-  uint32_t difficulty;
-  uint32_t nonce;
-  uint8_t tx_count;  // should always be zero
-
-  BlockHeader()
-      : version(0),
-        prev_block(empty_hash),
-        merkle_root(empty_hash),
-        timestamp(0),
-        difficulty(0),
-        nonce(0),
-        tx_count(0) {}
-};
-
-struct VersionNetAddr {
-  uint64_t services;
-  Addr addr;
-
-  VersionNetAddr() : services(0) {}
-};
-
-struct NetAddr {
-  uint32_t time;
-  uint64_t services;
-  Addr addr;
-
-  NetAddr() : time(time32()), services(0) {}
-};
-
 struct Message {
   Headers headers;
 
