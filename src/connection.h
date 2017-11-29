@@ -78,10 +78,15 @@ class Connection {
   // close this connection (e.g. because we have a bad peer)
   void shutdown();
 
+  // request headers
+  void get_headers(std::vector<hash_t>& locator_hashes,
+                   hash_t hash_stop = empty_hash);
+
   void handle_addr(AddrMsg* addrs);
   void handle_getaddr(GetAddr* getaddr);
   void handle_getblocks(GetBlocks* getblocks);
   void handle_getheaders(GetHeaders* getheaders);
+  void handle_headers(HeadersMsg* headers);
   void handle_inv(Inv* inv);
   void handle_mempool(Mempool* pool);
   void handle_ping(Ping* ping);

@@ -57,25 +57,31 @@ struct GetAddr : Message {
 
 struct GetBlocks : Message {
   uint32_t version;
-  size_t hash_count;
-  std::vector<hash_t> block_locators;
+  std::vector<hash_t> locator_hashes;
   hash_t hash_stop;
 
   GetBlocks() : GetBlocks(Headers("getblocks")) {}
   explicit GetBlocks(const Headers &hdrs)
-      : Message(hdrs), version(0), hash_count(0), hash_stop(empty_hash) {}
+      : Message(hdrs), version(0), hash_stop(empty_hash) {}
   FINAL_ENCODE
 };
 
 struct GetHeaders : Message {
   uint32_t version;
-  size_t hash_count;
-  std::vector<hash_t> block_locators;
+  std::vector<hash_t> locator_hashes;
   hash_t hash_stop;
 
   GetHeaders() : GetHeaders(Headers("getheaders")) {}
   explicit GetHeaders(const Headers &hdrs)
-      : Message(hdrs), version(0), hash_count(0), hash_stop(empty_hash) {}
+      : Message(hdrs), version(0), hash_stop(empty_hash) {}
+  FINAL_ENCODE
+};
+
+struct HeadersMsg : Message {
+  std::vector<hash_t> block_headers;
+
+  HeadersMsg() : HeadersMsg(Headers("headers")) {}
+  explicit HeadersMsg(const Headers &hdrs) : Message(hdrs) {}
   FINAL_ENCODE
 };
 

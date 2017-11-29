@@ -76,6 +76,8 @@ bool Connection::read_message() {
       handle_getblocks(dynamic_cast<GetBlocks*>(msg.get()));
     } else if (cmd == "getheaders") {
       handle_getheaders(dynamic_cast<GetHeaders*>(msg.get()));
+    } else if (cmd == "headers") {
+      handle_headers(dynamic_cast<HeadersMsg*>(msg.get()));
     } else if (cmd == "inv") {
       handle_inv(dynamic_cast<Inv*>(msg.get()));
     } else if (cmd == "mempool") {
@@ -116,8 +118,16 @@ void Connection::send_version() {
   ver.addr_recv.addr = peer_.addr;
   ver.nonce = us_.nonce;
   ver.user_agent = us_.user_agent;
-
   send_msg(ver);
+}
+
+void Connection::get_headers(std::vector<hash_t>& locator_hashes,
+                             hash_t hash_stop) {
+  GetHeaders req;
+  req.version = us_.version;
+  req.locator_hashes = locator_hashes;
+  req.hash_stop = hash_stop;
+  send_msg(req);
 }
 
 void Connection::shutdown() { log->error("shutdown not yet handled"); }
@@ -137,6 +147,13 @@ void Connection::handle_getblocks(GetBlocks* blocks) {
 
 void Connection::handle_getheaders(GetHeaders* headers) {
   log->debug("ignoring getheaders message");
+}
+
+void Connection::handle_headers(HeadersMsg* msg) {
+  log->info("headers message with {} block headers", msg->block_headers.size());
+  for (const auto& block_hdr : msg->block_headers) {
+    log->info("new header: {}", array_to_hex(block_hdr));
+  }
 }
 
 void Connection::handle_mempool(Mempool* pool) {
@@ -224,6 +241,12 @@ void Connection::handle_version(Version* ver) {
     pong_->start(std::chrono::seconds(5), std::chrono::seconds(0));
   });
   ping_->start(ping_interval, ping_interval);
+
+#if 0
+  // Need to update code before spamming the network with this.
+  std::vector<hash_t> needed{genesis_hash};
+  get_headers(needed);
+#endif
 }
 
 }  // namespace spv

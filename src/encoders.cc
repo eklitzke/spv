@@ -160,8 +160,8 @@ DECLARE_ENCODE(GetAddr) { return Encoder(headers).serialize(sz); }
 DECLARE_ENCODE(GetBlocks) {
   Encoder enc(headers);
   enc.push(version);
-  enc.push_varint(block_locators.size());
-  for (const auto &locator : block_locators) {
+  enc.push_varint(locator_hashes.size());
+  for (const auto &locator : locator_hashes) {
     enc.push(locator);
   }
   enc.push(hash_stop);
@@ -171,11 +171,20 @@ DECLARE_ENCODE(GetBlocks) {
 DECLARE_ENCODE(GetHeaders) {
   Encoder enc(headers);
   enc.push(version);
-  enc.push_varint(block_locators.size());
-  for (const auto &locator : block_locators) {
+  enc.push_varint(locator_hashes.size());
+  for (const auto &locator : locator_hashes) {
     enc.push(locator);
   }
   enc.push(hash_stop);
+  return enc.serialize(sz);
+}
+
+DECLARE_ENCODE(HeadersMsg) {
+  Encoder enc(headers);
+  enc.push_varint(block_headers.size());
+  for (const auto &hdr : block_headers) {
+    enc.push(hdr);
+  }
   return enc.serialize(sz);
 }
 

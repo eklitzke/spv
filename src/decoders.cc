@@ -268,7 +268,7 @@ DECLARE_PARSER(getblocks, [](auto &dec, const auto &hdrs) {
   for (size_t i = 0; i < count; i++) {
     hash_t locator_hash;
     dec.pull(locator_hash);
-    msg->block_locators.push_back(locator_hash);
+    msg->locator_hashes.push_back(locator_hash);
   }
   dec.pull(msg->hash_stop);
   return msg;
@@ -288,9 +288,26 @@ DECLARE_PARSER(getheaders, [](auto &dec, const auto &hdrs) {
   for (size_t i = 0; i < count; i++) {
     hash_t locator_hash;
     dec.pull(locator_hash);
-    msg->block_locators.push_back(locator_hash);
+    msg->locator_hashes.push_back(locator_hash);
   }
   dec.pull(msg->hash_stop);
+  return msg;
+});
+
+DECLARE_PARSER(headers, [](auto &dec, const auto &hdrs) {
+  auto msg = std::make_unique<HeadersMsg>(hdrs);
+  uint64_t count;
+  dec.pull_varint(count);
+  if (count > 10000) {
+    std::ostringstream os;
+    os << "headers count " << count << " is too large, ignoring";
+    throw BadMessage(os.str());
+  }
+  for (size_t i = 0; i < count; i++) {
+    hash_t hash;
+    dec.pull(hash);
+    msg->block_headers.push_back(hash);
+  }
   return msg;
 });
 
