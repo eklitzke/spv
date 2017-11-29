@@ -98,6 +98,18 @@ struct AddrMsg : Message {
   FINAL_ENCODE
 };
 
+struct GetBlocks : Message {
+  uint32_t version;
+  size_t hash_count;
+  std::vector<hash_t> block_locators;
+  hash_t hash_stop;
+
+  GetBlocks() : GetBlocks(Headers("getblocks")) {}
+  explicit GetBlocks(const Headers &hdrs)
+      : Message(hdrs), version(0), hash_count(0), hash_stop(empty_hash) {}
+  FINAL_ENCODE
+};
+
 struct GetHeaders : Message {
   uint32_t version;
   size_t hash_count;

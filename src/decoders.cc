@@ -242,6 +242,26 @@ DECLARE_PARSER(addr, [](auto &dec, const auto &hdrs) {
   return msg;
 });
 
+DECLARE_PARSER(get_blocks, [](auto &dec, const auto &hdrs) {
+  auto msg = std::make_unique<GetBlocks>(hdrs);
+  dec.pull(msg->version);
+  uint64_t count;
+  dec.pull_varint(count);
+  if (count > 2000) {
+    std::ostringstream os;
+    os << "getblocks hash_count " << count << " is too large, ignoring";
+    throw BadMessage(os.str());
+  }
+  log->debug("peer wants {} block(s)", count);
+  for (size_t i = 0; i < count; i++) {
+    hash_t locator_hash;
+    dec.pull(locator_hash);
+    msg->block_locators.push_back(locator_hash);
+  }
+  dec.pull(msg->hash_stop);
+  return msg;
+});
+
 DECLARE_PARSER(get_headers, [](auto &dec, const auto &hdrs) {
   auto msg = std::make_unique<GetHeaders>(hdrs);
   dec.pull(msg->version);

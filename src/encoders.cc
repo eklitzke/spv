@@ -147,6 +147,17 @@ DECLARE_ENCODE(AddrMsg) {
   return enc.serialize(sz);
 }
 
+DECLARE_ENCODE(GetBlocks) {
+  Encoder enc;
+  enc.push(version);
+  enc.push_varint(block_locators.size());
+  for (const auto &locator : block_locators) {
+    enc.push(locator);
+  }
+  enc.push(hash_stop);
+  return enc.serialize(sz);
+}
+
 DECLARE_ENCODE(GetHeaders) {
   Encoder enc;
   enc.push(version);

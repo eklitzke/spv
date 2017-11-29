@@ -66,6 +66,10 @@ bool Connection::read_message() {
       for (const auto& addr : addrs->addrs) {
         log->debug("peer sent us new addr {}", addr.addr);
       }
+    } else if (cmd == "getblocks") {
+      log->debug("ignoring getblocks");
+    } else if (cmd == "getheaders") {
+      log->debug("ignoring getheaders");
     } else if (cmd == "version") {
       Version* ver = dynamic_cast<Version*>(msg.get());
       peer_.nonce = ver->nonce;
