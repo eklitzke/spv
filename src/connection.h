@@ -28,6 +28,7 @@
 
 namespace uvw {
 class TcpHandle;
+class TimerHandle;
 class Loop;
 class Addr;
 }  // namespace uvw
@@ -60,13 +61,22 @@ class Connection {
   Buffer buf_;
   const Peer& us_;
   Peer peer_;
+  uvw::Loop& loop_;
   std::shared_ptr<uvw::TcpHandle> tcp_;
+
+  // heartbeat information
+  uint64_t ping_nonce_;
+  std::shared_ptr<uvw::TimerHandle> ping_;
+  std::shared_ptr<uvw::TimerHandle> pong_;
 
   // returns true if a message was actually read
   bool read_message();
 
   // send a message to our peer
   void send_msg(const Message& msg);
+
+  // close this connection (e.g. because we have a bad peer)
+  void shutdown();
 };
 }  // namespace spv
 

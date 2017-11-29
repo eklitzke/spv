@@ -25,6 +25,25 @@
 #include "./util.h"
 
 namespace spv {
+enum class CCode : uint8_t {
+  MALFORMED = 0x1,
+  INVALID = 0x10,
+  OBSOLETE = 0x11,
+  DUPLICATE = 0x12,
+  NONSTANDARD = 0x40,
+  DUST = 0x41,
+  INSUFFICIENT_FEE = 0x42,
+  CHECKPOINT = 0x43,
+};
+
+enum class InvType : uint32_t {
+  ERROR = 0,
+  TX = 1,
+  BLOCK = 2,
+  FILTERED_BLOCK = 3,
+  CMPCT_BLOCK = 4,
+};
+
 struct Headers {
   uint32_t magic;
   std::string command;

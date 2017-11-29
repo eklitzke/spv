@@ -24,6 +24,7 @@
 #include "./config.h"
 #include "./connection.h"
 #include "./peer.h"
+#include "./util.h"
 
 namespace uvw {
 class Loop;
@@ -31,6 +32,7 @@ class Loop;
 
 namespace spv {
 class Addr;
+class Connection;
 
 class Client {
  public:

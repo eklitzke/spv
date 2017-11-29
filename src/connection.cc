@@ -24,8 +24,14 @@
 namespace spv {
 MODULE_LOGGER
 
+const static std::chrono::seconds ping_interval(60);
+
 Connection::Connection(const Peer& us, Addr addr, uvw::Loop& loop)
-    : us_(us), peer_(addr), tcp_(loop.resource<uvw::TcpHandle>()) {
+    : us_(us),
+      peer_(addr),
+      loop_(loop),
+      tcp_(loop.resource<uvw::TcpHandle>()),
+      ping_nonce_(0) {
   assert(!addr.ip().empty() && addr.port());
 }
 
@@ -82,10 +88,32 @@ bool Connection::read_message() {
       peer_.version = ver->version;
       log->info("finished handshake with peer {}", peer_);
       send_msg(VerAck{});
-      if (peer_.version >= 70012) {
-        send_msg(SendHeaders{});
-      }
-      // else close connection?
+
+      // set up a ping timer; TODO: require pongs
+      ping_ = loop_.resource<uvw::TimerHandle>();
+      ping_->once<uvw::ErrorEvent>([](const auto&, auto& timer) {
+        log->error("got error from ping timer");
+        timer.close();
+      });
+      ping_->on<uvw::TimerEvent>([this](const auto&, auto&) {
+        Ping ping;
+        ping.nonce = ping_nonce_ = rand64();
+        log->debug("ping timer fired for peer {}, using nonce {}", peer_,
+                   ping_nonce_);
+        send_msg(ping);
+
+        pong_ = loop_.resource<uvw::TimerHandle>();
+        pong_->once<uvw::ErrorEvent>([this](const auto&, auto& timer) {
+          log->error("got error from pong timer");
+          pong_->close();
+        });
+        pong_->on<uvw::TimerEvent>([this](const auto&, auto&) {
+          log->warn("peer did not send up pong in time");
+          shutdown();
+        });
+        pong_->start(std::chrono::seconds(5), std::chrono::seconds(0));
+      });
+      ping_->start(ping_interval, ping_interval);
     } else if (cmd == "verack") {
       log->debug("ignoring verack");
     } else if (cmd == "ping") {
@@ -94,7 +122,23 @@ bool Connection::read_message() {
       pong.nonce = ping->nonce;
       send_msg(pong);
     } else if (cmd == "pong") {
-      log->debug("ignoring pong");
+      Pong* pong = dynamic_cast<Pong*>(msg.get());
+      if (pong_) {
+        if (pong->nonce != ping_nonce_) {
+          log->warn(
+              "peer {} sent invalid pong nonce, they sent {}, we expected {}, "
+              "shutting down",
+              peer_, pong->nonce, ping_nonce_);
+          shutdown();
+        } else {
+          log->debug("peer {} sent us correct pong nonce!", peer_);
+          pong_->close();
+        }
+        pong_.reset();
+      } else {
+        log->warn("peer {} sent pong when one was not expected", peer_);
+        shutdown();
+      }
     } else if (cmd == "reject") {
       Reject* rej = dynamic_cast<Reject*>(msg.get());
       uint8_t ccode = static_cast<uint8_t>(rej->ccode);
@@ -130,4 +174,6 @@ void Connection::send_version() {
 
   send_msg(ver);
 }
+
+void Connection::shutdown() { log->error("shutdown not yet handled"); }
 }  // namespace spv
