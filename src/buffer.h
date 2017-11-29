@@ -82,27 +82,9 @@ class Buffer {
   std::unique_ptr<char[]> data_;
 
   // Ensure there's enough capacity to add len bytes.
-  void ensure_capacity(size_t len) {
-    size_t new_capacity = capacity_;
-    while (size_ + len > new_capacity) {
-      new_capacity *= 2;
-    }
-    const size_t extra = new_capacity - capacity_;
-    if (extra) {
-      std::unique_ptr<char[]> new_data(new char[new_capacity]);
-      std::memmove(new_data.get(), data_.get(), capacity_);
-      std::memset(new_data.get() + capacity_, 0, extra);
-      data_ = std::move(new_data);
-      capacity_ = new_capacity;
-    }
-  }
+  void ensure_capacity(size_t len);
 
  protected:
-  std::unique_ptr<char[]> move_buffer(size_t &sz) {
-    sz = size_;
-    size_ = 0;
-    capacity_ = 0;
-    return std::move(data_);
-  }
+  std::unique_ptr<char[]> move_buffer(size_t &sz);
 };
 }  // namespace spv

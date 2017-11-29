@@ -61,12 +61,18 @@ const static std::array<uint8_t, 12> ipv4_prefix = {0, 0, 0, 0, 0,    0,
 
 void Addr::encode_addrbuf(addrbuf_t &buf) const {
   switch (af_) {
+    case -1:
+      std::memset(buf.data(), 0, 16);
+      static_assert(sizeof(buf) == 16);
+      return;
     case AF_INET:
       std::memmove(buf.data(), ipv4_prefix.data(), 12);
-      std::memmove(buf.data() + 12, &addr_.ipv4.s_addr, 4);
+      std::memmove(buf.data() + 12, &inaddr_.ipv4.s_addr, 4);
+      static_assert(sizeof(inaddr_.ipv4.s_addr) == 4);
       return;
     case AF_INET6:
-      std::memmove(buf.data(), &addr_.ipv6.s6_addr, 16);
+      std::memmove(buf.data(), &inaddr_.ipv6.s6_addr, 16);
+      static_assert(sizeof(inaddr_.ipv6.s6_addr) == 16);
       return;
   }
   assert(false);  // not reached

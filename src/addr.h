@@ -29,31 +29,26 @@ typedef std::array<uint8_t, 16> addrbuf_t;
 union inaddr {
   in_addr ipv4;
   in6_addr ipv6;
+
+  inaddr() { std::memset(this, 0, sizeof(inaddr)); }
 };
 
 class Addr {
  public:
-  Addr() : af_(AF_INET), port_(0) {  // FIXME: this is bad
-    std::memset(&addr_, 0, sizeof(addr_));
-  }
+  Addr() : af_(-1), port_(0) {}
   Addr(const Addr& other)
       : af_(other.af_),
-        addr_(other.addr_),
         port_(other.port_),
+        inaddr_(other.inaddr_),
         ip_(other.ip_) {}
   explicit Addr(const addrinfo* ai);
 
   inline int af() const { return af_; }
-  inline in_addr ipv4() const { return addr_.ipv4; }
-  inline in6_addr ipv6() const { return addr_.ipv6; }
   inline uint16_t port() const { return port_; }
   inline const std::string& ip() const { return ip_; }
 
+  inline void set_port(uint16_t port) { port_ = port; }  // in host order
   void set_addr(const addrbuf_t& buf);
-  inline void set_port(uint16_t port) {
-    // caller must make sure to set this in host order
-    port_ = port;
-  }
 
   void encode_addrbuf(addrbuf_t& buf) const;
 
@@ -63,8 +58,8 @@ class Addr {
 
  private:
   int af_;  // address family: AF_INET or AF_INET6
-  inaddr addr_;
   uint16_t port_;
+  inaddr inaddr_;
   std::string ip_;
 };
 }  // namespace spv

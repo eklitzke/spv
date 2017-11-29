@@ -86,8 +86,13 @@ void Client::connect_to_peer(const Addr &addr) {
   };
 
   conn->once<uvw::ErrorEvent>(
-      [this, cancel_timer, &conn](const auto &, auto &c) {
-        log->debug("error from {}", conn.peer());
+      [this, cancel_timer, &conn](const auto &exc, auto &c) {
+        if (exc.code() == ECONNREFUSED) {
+          log->debug("peer {} refused our TCP request", conn.peer());
+        } else {
+          log->warn("error from peer {}: {} {} {}", conn.peer(), exc.what(),
+                    exc.name(), exc.code());
+        }
         cancel_timer();
         remove_connection(conn);
       });
