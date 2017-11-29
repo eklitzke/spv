@@ -11,10 +11,14 @@ useful as a reference. I would also recommend taking a look at
 
 ## Status
 
-This code is considered **alpha** and incomplete. The client can connect to the
-peers via the DNS seed list, and send/receive a small subset of the p2p message
-types. To avoid being a nuisance to the network, the client is currently
-hard-coded to connect to testnet.
+This code is considered **alpha** and incomplete. To avoid being a nuisance to
+the network, the client is currently hard-coded to connect to testnet.
+
+Currently the client can connect to the peers via the DNS seed list, and
+send/receive most important P2P message types. The current focus is making the
+P2P behavior of the client more complete, and more similar to the reference
+client. Logic to actually validate headers/blocks/transactions is missing, but
+coming soon.
 
 ## Compiling
 
