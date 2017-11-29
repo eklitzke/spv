@@ -33,7 +33,9 @@ union inaddr {
 
 class Addr {
  public:
-  Addr() : af_(AF_INET) {}  // FIXME: this is bad
+  Addr() : af_(AF_INET), port_(0) {  // FIXME: this is bad
+    std::memset(&addr_, 0, sizeof(addr_));
+  }
   Addr(const Addr& other)
       : af_(other.af_),
         addr_(other.addr_),

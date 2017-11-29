@@ -155,10 +155,7 @@ DECLARE_ENCODE(AddrMsg) {
   return enc.serialize(sz);
 }
 
-DECLARE_ENCODE(GetAddr) {
-  Encoder enc(headers);
-  return enc.serialize(sz);
-}
+DECLARE_ENCODE(GetAddr) { return Encoder(headers).serialize(sz); }
 
 DECLARE_ENCODE(GetBlocks) {
   Encoder enc(headers);
@@ -181,6 +178,8 @@ DECLARE_ENCODE(GetHeaders) {
   enc.push(hash_stop);
   return enc.serialize(sz);
 }
+
+DECLARE_ENCODE(Mempool) { return Encoder(headers).serialize(sz); }
 
 DECLARE_ENCODE(Ping) {
   Encoder enc(headers);
@@ -205,15 +204,9 @@ DECLARE_ENCODE(Reject) {
   return enc.serialize(sz);
 }
 
-DECLARE_ENCODE(SendHeaders) {
-  Encoder enc(headers);
-  return enc.serialize(sz);
-}
+DECLARE_ENCODE(SendHeaders) { return Encoder(headers).serialize(sz); }
 
-DECLARE_ENCODE(VerAck) {
-  Encoder enc(headers);
-  return enc.serialize(sz);
-}
+DECLARE_ENCODE(VerAck) { return Encoder(headers).serialize(sz); }
 
 DECLARE_ENCODE(Version) {
   Encoder enc(headers);

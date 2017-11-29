@@ -72,6 +72,8 @@ bool Connection::read_message() {
       log->debug("ignoring getblocks");
     } else if (cmd == "getheaders") {
       log->debug("ignoring getheaders");
+    } else if (cmd == "mempool") {
+      log->debug("ignoring mempool");
     } else if (cmd == "version") {
       Version* ver = dynamic_cast<Version*>(msg.get());
       peer_.nonce = ver->nonce;

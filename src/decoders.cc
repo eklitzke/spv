@@ -294,6 +294,10 @@ DECLARE_PARSER(getheaders, [](auto &dec, const auto &hdrs) {
   return msg;
 });
 
+DECLARE_PARSER(mempool, [](auto &dec, const auto &hdrs) {
+  return std::make_unique<Mempool>(hdrs);
+});
+
 DECLARE_PARSER(ping, [](auto &dec, const auto &hdrs) {
   auto msg = std::make_unique<Ping>(hdrs);
   dec.pull(msg->nonce);

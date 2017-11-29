@@ -53,10 +53,9 @@ class Buffer {
     }
   }
 
-  // append zeros
+  // append zeros; note that the buffer is already zero-initialized
   void append_zeros(size_t len) {
     ensure_capacity(len);
-    std::memset(data_.get() + static_cast<ptrdiff_t>(size_), 0, len);
     size_ += len;
   }
 
@@ -69,10 +68,12 @@ class Buffer {
   inline size_t size() const { return size_; }
   inline const char *data() const { return data_.get(); }
 
+  // this could be made more efficient
   void consume(size_t sz) {
     assert(size_ >= sz);
-    std::memcpy(data_.get(), data_.get() + sz, size_ - sz);
+    std::memcpy(data_.get(), data_.get() + sz, capacity_ - sz);
     size_ -= sz;
+    std::memset(data_.get() + size_, 0, capacity_ - size_);
   }
 
  private:

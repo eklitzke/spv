@@ -128,6 +128,12 @@ struct GetHeaders : Message {
   FINAL_ENCODE
 };
 
+struct Mempool : Message {
+  Mempool() : Mempool(Headers("mempool")) {}
+  explicit Mempool(const Headers &hdrs) : Message(hdrs) {}
+  FINAL_ENCODE
+};
+
 struct Ping : Message {
   uint64_t nonce;
 
