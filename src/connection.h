@@ -36,8 +36,7 @@ namespace spv {
 class Connection {
  public:
   Connection() = delete;
-  Connection(const Peer& us, Addr addr, uvw::Loop& loop)
-      : us_(us), peer_(addr), tcp_(loop.resource<uvw::TcpHandle>()) {}
+  Connection(const Peer& us, Addr addr, uvw::Loop& loop);
   Connection(const Connection& other) = delete;
 
   const Peer& peer() const { return peer_; }
@@ -75,7 +74,7 @@ namespace std {
 template <>
 struct hash<spv::Connection> {
   std::size_t operator()(const spv::Connection& conn) const noexcept {
-    return std::hash<uvw::Addr>{}(conn.peer().addr.uvw_addr());
+    return std::hash<spv::Addr>{}(conn.peer().addr);
   }
 };
 }  // namespace std

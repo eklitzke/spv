@@ -20,6 +20,7 @@
 
 #include "./config.h"
 #include "./logging.h"
+#include "./uvw.h"
 
 namespace spv {
 MODULE_LOGGER

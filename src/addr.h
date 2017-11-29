@@ -23,8 +23,6 @@
 #include <array>
 #include <cstring>
 
-#include "./uvw.h"
-
 namespace spv {
 typedef std::array<uint8_t, 16> addrbuf_t;
 
@@ -36,34 +34,32 @@ union inaddr {
 class Addr {
  public:
   Addr() : af_(AF_INET) {}  // FIXME: this is bad
-  Addr(const Addr& other) : af_(other.af_), addr_(other.addr_) {
-    uvw_addr_.ip = other.uvw_addr_.ip;
-    uvw_addr_.port = other.uvw_addr_.port;
-  }
+  Addr(const Addr& other) : af_(other.af_), addr_(other.addr_) {}
   explicit Addr(const addrinfo* ai);
 
   inline int af() const { return af_; }
   inline in_addr ipv4() const { return addr_.ipv4; }
   inline in6_addr ipv6() const { return addr_.ipv6; }
-  inline uint16_t port() const { return static_cast<uint16_t>(uvw_addr_.port); }
-  inline const uvw::Addr& uvw_addr() const { return uvw_addr_; }
+  inline uint16_t port() const { return port_; }
+  inline const std::string& ip() const { return ip_; }
 
   void set_addr(const addrbuf_t& buf);
   inline void set_port(uint16_t port) {
     // caller must make sure to set this in host order
-    uvw_addr_.port = port;
+    port_ = port;
   }
 
   void encode_addrbuf(addrbuf_t& buf) const;
 
   inline bool operator==(const Addr& other) const {
-    return af_ == other.af_ && uvw_addr_ == other.uvw_addr_;
+    return af_ == other.af_ && port_ == other.port_ && ip_ == other.ip_;
   }
 
  private:
   int af_;  // address family: AF_INET or AF_INET6
   inaddr addr_;
-  uvw::Addr uvw_addr_;
+  uint16_t port_;
+  std::string ip_;
 };
 }  // namespace spv
 
@@ -73,8 +69,8 @@ namespace std {
 template <>
 struct hash<spv::Addr> {
   std::size_t operator()(const spv::Addr& addr) const noexcept {
-    std::size_t h1 = std::hash<int>{}(addr.af());
-    std::size_t h2 = std::hash<uvw::Addr>{}(addr.uvw_addr());
+    std::size_t h1 = std::hash<uint16_t>{}(addr.port());
+    std::size_t h2 = std::hash<std::string>{}(addr.ip());
     return h1 ^ (h2 << 1);
   }
 };

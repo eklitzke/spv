@@ -52,8 +52,8 @@ Addr::Addr(const addrinfo *ai) : af_(ai->ai_family) {
       log->warn("unknown address family {}", ai->ai_addr->sa_family);
       return;
   }
-  uvw_addr_.port = PROTOCOL_PORT;
-  uvw_addr_.ip = buf;
+  port_ = PROTOCOL_PORT;
+  ip_ = buf;
 }
 
 const static std::array<uint8_t, 12> ipv4_prefix = {0, 0, 0, 0, 0,    0,
@@ -88,10 +88,10 @@ void Addr::set_addr(const addrbuf_t &buf) {
     log->warn("failed to decode addr: {}", strerror(errno));
     return;
   }
-  uvw_addr_.ip = s;
+  ip_ = s;
 }
 }  // namespace spv
 
 std::ostream &operator<<(std::ostream &o, const spv::Addr &addr) {
-  return o << addr.uvw_addr();
+  return o << addr.ip() << ":" << addr.port();
 }

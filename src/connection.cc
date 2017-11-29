@@ -19,13 +19,20 @@
 #include "./constants.h"
 #include "./logging.h"
 #include "./message.h"
+#include "./uvw.h"
 
 namespace spv {
 MODULE_LOGGER
 
+Connection::Connection(const Peer& us, Addr addr, uvw::Loop& loop)
+    : us_(us), peer_(addr), tcp_(loop.resource<uvw::TcpHandle>()) {}
+
 void Connection::connect() {
   log->debug("connecting to peer {}", peer_);
-  tcp_->connect(peer_.addr.uvw_addr());
+  uvw::Addr uvw_addr;
+  uvw_addr.ip = peer_.addr.ip();
+  uvw_addr.port = peer_.addr.port();
+  tcp_->connect(uvw_addr);
 }
 
 void Connection::read(const char* data, size_t sz) {
