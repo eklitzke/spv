@@ -77,6 +77,19 @@ class Connection {
 
   // close this connection (e.g. because we have a bad peer)
   void shutdown();
+
+  void handle_addr(AddrMsg* addrs);
+  void handle_getaddr(GetAddr* getaddr);
+  void handle_getblocks(GetBlocks* getblocks);
+  void handle_getheaders(GetHeaders* getheaders);
+  void handle_mempool(Mempool* pool);
+  void handle_ping(Ping* ping);
+  void handle_pong(Pong* pong);
+  void handle_reject(Reject* rej);
+  void handle_sendheaders(SendHeaders* send);
+  void handle_unknown(const std::string& msg);
+  void handle_verack(VerAck* ack);
+  void handle_version(Version* ver);
 };
 }  // namespace spv
 

@@ -64,91 +64,34 @@ bool Connection::read_message() {
     buf_.consume(bytes_consumed);
   }
 
+  // TODO: use a hash table for this, like in the decoder
   if (msg.get() != nullptr) {
     const std::string& cmd = msg->headers.command;
     log->info("message '{}' from peer {}", cmd, peer_);
     if (cmd == "addr") {
-      AddrMsg* addrs = dynamic_cast<AddrMsg*>(msg.get());
-      for (const auto& addr : addrs->addrs) {
-        log->debug("peer sent us new addr {}", addr.addr);
-      }
+      handle_addr(dynamic_cast<AddrMsg*>(msg.get()));
     } else if (cmd == "getaddr") {
-      log->debug("ignoring getaddr");
+      handle_getaddr(dynamic_cast<GetAddr*>(msg.get()));
     } else if (cmd == "getblocks") {
-      log->debug("ignoring getblocks");
+      handle_getblocks(dynamic_cast<GetBlocks*>(msg.get()));
     } else if (cmd == "getheaders") {
-      log->debug("ignoring getheaders");
+      handle_getheaders(dynamic_cast<GetHeaders*>(msg.get()));
     } else if (cmd == "mempool") {
-      log->debug("ignoring mempool");
-    } else if (cmd == "version") {
-      Version* ver = dynamic_cast<Version*>(msg.get());
-      peer_.nonce = ver->nonce;
-      peer_.services = ver->services;
-      peer_.user_agent = ver->user_agent;
-      peer_.version = ver->version;
-      log->info("finished handshake with peer {}", peer_);
-      send_msg(VerAck{});
-
-      // set up a ping timer; TODO: require pongs
-      ping_ = loop_.resource<uvw::TimerHandle>();
-      ping_->once<uvw::ErrorEvent>([](const auto&, auto& timer) {
-        log->error("got error from ping timer");
-        timer.close();
-      });
-      ping_->on<uvw::TimerEvent>([this](const auto&, auto&) {
-        Ping ping;
-        ping.nonce = ping_nonce_ = rand64();
-        log->debug("ping timer fired for peer {}, using nonce {}", peer_,
-                   ping_nonce_);
-        send_msg(ping);
-
-        pong_ = loop_.resource<uvw::TimerHandle>();
-        pong_->once<uvw::ErrorEvent>([this](const auto&, auto& timer) {
-          log->error("got error from pong timer");
-          pong_->close();
-        });
-        pong_->on<uvw::TimerEvent>([this](const auto&, auto&) {
-          log->warn("peer did not send up pong in time");
-          shutdown();
-        });
-        pong_->start(std::chrono::seconds(5), std::chrono::seconds(0));
-      });
-      ping_->start(ping_interval, ping_interval);
-    } else if (cmd == "verack") {
-      log->debug("ignoring verack");
+      handle_mempool(dynamic_cast<Mempool*>(msg.get()));
     } else if (cmd == "ping") {
-      Ping* ping = dynamic_cast<Ping*>(msg.get());
-      Pong pong;
-      pong.nonce = ping->nonce;
-      send_msg(pong);
+      handle_ping(dynamic_cast<Ping*>(msg.get()));
     } else if (cmd == "pong") {
-      Pong* pong = dynamic_cast<Pong*>(msg.get());
-      if (pong_) {
-        if (pong->nonce != ping_nonce_) {
-          log->warn(
-              "peer {} sent invalid pong nonce, they sent {}, we expected {}, "
-              "shutting down",
-              peer_, pong->nonce, ping_nonce_);
-          shutdown();
-        } else {
-          log->debug("peer {} sent us correct pong nonce!", peer_);
-          pong_->close();
-        }
-        pong_.reset();
-      } else {
-        log->warn("peer {} sent pong when one was not expected", peer_);
-        shutdown();
-      }
+      handle_pong(dynamic_cast<Pong*>(msg.get()));
     } else if (cmd == "reject") {
-      Reject* rej = dynamic_cast<Reject*>(msg.get());
-      uint8_t ccode = static_cast<uint8_t>(rej->ccode);
-      log->error("peer {} sent us reject: message={}, ccode={}, reason={}",
-                 peer_, rej->message, ccode, rej->reason);
+      handle_reject(dynamic_cast<Reject*>(msg.get()));
     } else if (cmd == "sendheaders") {
-      log->debug("ignoring sendheaders");
+      handle_sendheaders(dynamic_cast<SendHeaders*>(msg.get()));
+    } else if (cmd == "verack") {
+      handle_verack(dynamic_cast<VerAck*>(msg.get()));
+    } else if (cmd == "version") {
+      handle_version(dynamic_cast<Version*>(msg.get()));
     } else {
-      // not reached, decoder should have the logic to check for this
-      log->error("decoder returned unknown p2p message '{}'", cmd);
+      handle_unknown(cmd);
     }
   }
   return ret;
@@ -176,4 +119,104 @@ void Connection::send_version() {
 }
 
 void Connection::shutdown() { log->error("shutdown not yet handled"); }
+
+void Connection::handle_addr(AddrMsg* addrs) {
+  for (const auto& addr : addrs->addrs) {
+    log->debug("peer sent us new addr {}", addr.addr);
+  }
+}
+void Connection::handle_getaddr(GetAddr* addr) {
+  log->debug("ignoring getaddr message");
+}
+
+void Connection::handle_getblocks(GetBlocks* blocks) {
+  log->debug("ignoring getblocks message");
+}
+
+void Connection::handle_getheaders(GetHeaders* headers) {
+  log->debug("ignoring getheaders message");
+}
+
+void Connection::handle_mempool(Mempool* pool) {
+  log->debug("ignoring mempool message");
+}
+
+void Connection::handle_ping(Ping* ping) {
+  Pong pong;
+  pong.nonce = ping->nonce;
+  send_msg(pong);
+}
+
+void Connection::handle_pong(Pong* pong) {
+  if (pong_) {
+    if (pong->nonce != ping_nonce_) {
+      log->warn(
+          "peer {} sent invalid pong nonce, they sent {}, we expected {}, "
+          "shutting down",
+          peer_, pong->nonce, ping_nonce_);
+      shutdown();
+    } else {
+      log->debug("peer {} sent us correct pong nonce!", peer_);
+      pong_->close();
+    }
+    pong_.reset();
+  } else {
+    log->warn("peer {} sent pong when one was not expected", peer_);
+    shutdown();
+  }
+}
+
+void Connection::handle_reject(Reject* rej) {
+  uint8_t ccode = static_cast<uint8_t>(rej->ccode);
+  log->error("peer {} sent us reject: message={}, ccode={}, reason={}", peer_,
+             rej->message, ccode, rej->reason);
+}
+
+void Connection::handle_sendheaders(SendHeaders* send) {
+  log->debug("ignoring sendheaders message");
+}
+
+void Connection::handle_unknown(const std::string& cmd) {
+  log->error("decoder returned unknown p2p message '{}'", cmd);
+}
+
+void Connection::handle_verack(VerAck* ack) {
+  log->debug("ignoring verack message");
+}
+
+void Connection::handle_version(Version* ver) {
+  peer_.nonce = ver->nonce;
+  peer_.services = ver->services;
+  peer_.user_agent = ver->user_agent;
+  peer_.version = ver->version;
+  log->info("finished handshake with peer {}", peer_);
+  send_msg(VerAck{});
+
+  // set up a ping timer; TODO: require pongs
+  ping_ = loop_.resource<uvw::TimerHandle>();
+  ping_->once<uvw::ErrorEvent>([](const auto&, auto& timer) {
+    log->error("got error from ping timer");
+    timer.close();
+  });
+  ping_->on<uvw::TimerEvent>([this](const auto&, auto&) {
+    Ping ping;
+    ping.nonce = ping_nonce_ = rand64();
+    log->debug("ping timer fired for peer {}, using nonce {}", peer_,
+               ping_nonce_);
+    send_msg(ping);
+
+    pong_ = loop_.resource<uvw::TimerHandle>();
+    pong_->once<uvw::ErrorEvent>([this](const auto&, auto& timer) {
+      log->error("got error from pong timer");
+      pong_->close();
+    });
+    pong_->on<uvw::TimerEvent>([this](const auto&, auto&) {
+      log->warn("peer did not send up pong in time");
+      shutdown();
+    });
+    pong_->start(std::chrono::seconds(5), std::chrono::seconds(0));
+  });
+  ping_->start(ping_interval, ping_interval);
+}
+
 }  // namespace spv
