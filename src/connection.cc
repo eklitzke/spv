@@ -25,7 +25,9 @@ namespace spv {
 MODULE_LOGGER
 
 Connection::Connection(const Peer& us, Addr addr, uvw::Loop& loop)
-    : us_(us), peer_(addr), tcp_(loop.resource<uvw::TcpHandle>()) {}
+    : us_(us), peer_(addr), tcp_(loop.resource<uvw::TcpHandle>()) {
+  assert(!addr.ip().empty() && addr.port());
+}
 
 void Connection::connect() {
   log->debug("connecting to peer {}", peer_);

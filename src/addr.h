@@ -34,7 +34,11 @@ union inaddr {
 class Addr {
  public:
   Addr() : af_(AF_INET) {}  // FIXME: this is bad
-  Addr(const Addr& other) : af_(other.af_), addr_(other.addr_) {}
+  Addr(const Addr& other)
+      : af_(other.af_),
+        addr_(other.addr_),
+        port_(other.port_),
+        ip_(other.ip_) {}
   explicit Addr(const addrinfo* ai);
 
   inline int af() const { return af_; }

@@ -36,7 +36,7 @@ namespace spv {
 class Connection {
  public:
   Connection() = delete;
-  Connection(const Peer& us, Addr addr, uvw::Loop& loop);
+  Connection(const Peer& us, Addr them, uvw::Loop& loop);
   Connection(const Connection& other) = delete;
 
   const Peer& peer() const { return peer_; }
