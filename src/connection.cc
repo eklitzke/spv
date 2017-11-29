@@ -74,6 +74,10 @@ bool Connection::read_message() {
       peer_.version = ver->version;
       log->info("finished handshake with peer {}", peer_);
       send_msg(VerAck{});
+      if (peer_.version >= 70012) {
+        send_msg(SendHeaders{});
+      }
+      // else close connection?
     } else if (cmd == "verack") {
       log->debug("ignoring verack");
     } else if (cmd == "ping") {

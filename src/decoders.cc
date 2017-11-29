@@ -182,6 +182,8 @@ struct Decoder {
     pull(addr.services);
     pull(addr.addr);
   }
+
+  void pull(hash_t &hash) { pull_buf(hash.data(), sizeof hash); }
 };
 
 typedef std::function<std::unique_ptr<Message>(Decoder &, const Headers &)>
@@ -228,7 +230,7 @@ DECLARE_PARSER(addr, [](auto &dec, const auto &hdrs) {
   dec.pull_varint(count);
   if (count > 1000) {
     std::ostringstream os;
-    os << "addr coutn " << count << " is too large, ignoring";
+    os << "addr count " << count << " is too large, ignoring";
     throw BadMessage(os.str());
   }
   log->debug("peer is sending us {} addr(s)", count);
@@ -237,6 +239,26 @@ DECLARE_PARSER(addr, [](auto &dec, const auto &hdrs) {
     dec.pull(addr);
     msg->addrs.push_back(addr);
   }
+  return msg;
+});
+
+DECLARE_PARSER(get_headers, [](auto &dec, const auto &hdrs) {
+  auto msg = std::make_unique<GetHeaders>(hdrs);
+  dec.pull(msg->version);
+  uint64_t count;
+  dec.pull_varint(count);
+  if (count > 2000) {
+    std::ostringstream os;
+    os << "getheaders hash_count " << count << " is too large, ignoring";
+    throw BadMessage(os.str());
+  }
+  log->debug("peer wants {} header(s)", count);
+  for (size_t i = 0; i < count; i++) {
+    hash_t locator_hash;
+    dec.pull(locator_hash);
+    msg->block_locators.push_back(locator_hash);
+  }
+  dec.pull(msg->hash_stop);
   return msg;
 });
 

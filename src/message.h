@@ -24,14 +24,10 @@
 
 #include "./addr.h"
 #include "./config.h"
+#include "./constants.h"
 #include "./util.h"
 
 namespace spv {
-// these must be unsigned, enums may be signed
-inline uint32_t MAINNET_MAGIC = 0xD9B4BEF9;
-inline uint32_t TESTNET_MAGIC = 0xDAB5BFFA;
-inline uint32_t TESTNET3_MAGIC = 0x0709110B;
-
 struct Headers {
   uint32_t magic;
   std::string command;
@@ -46,6 +42,25 @@ struct Headers {
         command(other.command),
         payload_size(other.payload_size),
         checksum(other.checksum) {}
+};
+
+struct BlockHeader {
+  uint32_t version;  // supposed to be signed, but who cares
+  hash_t prev_block;
+  hash_t merkle_root;
+  uint32_t timestamp;
+  uint32_t difficulty;
+  uint32_t nonce;
+  uint8_t tx_count;  // should always be zero
+
+  BlockHeader()
+      : version(0),
+        prev_block(empty_hash),
+        merkle_root(empty_hash),
+        timestamp(0),
+        difficulty(0),
+        nonce(0),
+        tx_count(0) {}
 };
 
 struct VersionNetAddr {
@@ -80,6 +95,18 @@ struct AddrMsg : Message {
 
   AddrMsg() : AddrMsg(Headers("addr")) {}
   explicit AddrMsg(const Headers &hdrs) : Message(hdrs) {}
+  FINAL_ENCODE
+};
+
+struct GetHeaders : Message {
+  uint32_t version;
+  size_t hash_count;
+  std::vector<hash_t> block_locators;
+  hash_t hash_stop;
+
+  GetHeaders() : GetHeaders(Headers("getheaders")) {}
+  explicit GetHeaders(const Headers &hdrs)
+      : Message(hdrs), version(0), hash_count(0), hash_stop(empty_hash) {}
   FINAL_ENCODE
 };
 

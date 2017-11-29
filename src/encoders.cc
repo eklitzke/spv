@@ -119,6 +119,8 @@ struct Encoder : Buffer {
     append(s.c_str(), s.size());
   }
 
+  void push(const hash_t &hash) { append(hash.data(), sizeof hash); }
+
   void finish_headers() {
     // insert the length
     uint32_t len = htole32(size() - HEADER_SIZE);
@@ -142,6 +144,17 @@ DECLARE_ENCODE(AddrMsg) {
   for (const auto &addr : addrs) {
     enc.push(addr);
   }
+  return enc.serialize(sz);
+}
+
+DECLARE_ENCODE(GetHeaders) {
+  Encoder enc;
+  enc.push(version);
+  enc.push_varint(block_locators.size());
+  for (const auto &locator : block_locators) {
+    enc.push(locator);
+  }
+  enc.push(hash_stop);
   return enc.serialize(sz);
 }
 
