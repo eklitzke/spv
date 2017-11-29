@@ -49,6 +49,23 @@ struct AddrMsg : Message {
   FINAL_ENCODE
 };
 
+#if 0
+  // need to add Tx
+struct Block : Message {
+  uint32_t version;
+  hash_t prev_block;
+  hash_t merkle_root;
+  uint32_t timestamp;
+  uint32_t difficulty;
+  uint32_t nonce;
+  std::vector<Tx> txns;
+
+  Block() : Block(Headers("block")) {}
+  explicit Block(const Headers &hdrs) : Message(hdrs) {}
+  FINAL_ENCODE
+};
+#endif
+
 struct GetAddr : Message {
   GetAddr() : GetAddr(Headers("getaddr")) {}
   explicit GetAddr(const Headers &hdrs) : Message(hdrs) {}
