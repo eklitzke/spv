@@ -76,6 +76,8 @@ bool Connection::read_message() {
       handle_getblocks(dynamic_cast<GetBlocks*>(msg.get()));
     } else if (cmd == "getheaders") {
       handle_getheaders(dynamic_cast<GetHeaders*>(msg.get()));
+    } else if (cmd == "inv") {
+      handle_inv(dynamic_cast<Inv*>(msg.get()));
     } else if (cmd == "mempool") {
       handle_mempool(dynamic_cast<Mempool*>(msg.get()));
     } else if (cmd == "ping") {
@@ -139,6 +141,10 @@ void Connection::handle_getheaders(GetHeaders* headers) {
 
 void Connection::handle_mempool(Mempool* pool) {
   log->debug("ignoring mempool message");
+}
+
+void Connection::handle_inv(Inv* inv) {
+  log->info("inv message with type", inv->type);
 }
 
 void Connection::handle_ping(Ping* ping) {

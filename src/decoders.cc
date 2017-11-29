@@ -192,11 +192,6 @@ struct Decoder {
   }
 
   void pull(hash_t &hash) { pull_buf(hash.data(), sizeof hash); }
-
-  void pull(Inv &inv) {
-    pull(inv.type);
-    pull(inv.hash);
-  }
 };
 
 typedef std::function<std::unique_ptr<Message>(Decoder &, const Headers &)>
@@ -296,6 +291,13 @@ DECLARE_PARSER(getheaders, [](auto &dec, const auto &hdrs) {
     msg->block_locators.push_back(locator_hash);
   }
   dec.pull(msg->hash_stop);
+  return msg;
+});
+
+DECLARE_PARSER(inv, [](auto &dec, const auto &hdrs) {
+  auto msg = std::make_unique<Inv>(hdrs);
+  dec.pull(msg->type);
+  dec.pull(msg->hash);
   return msg;
 });
 

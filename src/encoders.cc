@@ -119,11 +119,6 @@ class Encoder : public Buffer {
 
   void push(const hash_t &hash) { append(hash.data(), sizeof hash); }
 
-  void push(const Inv &inv) {
-    push(inv.type);
-    push(inv.hash);
-  }
-
   void finish_headers() {
     // insert the length
     uint32_t len = htole32(size() - HEADER_SIZE);
@@ -181,6 +176,13 @@ DECLARE_ENCODE(GetHeaders) {
     enc.push(locator);
   }
   enc.push(hash_stop);
+  return enc.serialize(sz);
+}
+
+DECLARE_ENCODE(Inv) {
+  Encoder enc(headers);
+  enc.push(type);
+  enc.push(hash);
   return enc.serialize(sz);
 }
 

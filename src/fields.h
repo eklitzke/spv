@@ -87,14 +87,6 @@ struct BlockHeader {
         tx_count(other.tx_count) {}
 };
 
-struct Inv {
-  uint32_t type;
-  hash_t hash;
-
-  Inv() : type(0), hash(empty_hash) {}
-  Inv(const Inv &other) : type(other.type), hash(other.hash) {}
-};
-
 struct VersionNetAddr {
   uint64_t services;
   Addr addr;

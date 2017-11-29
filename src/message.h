@@ -79,6 +79,16 @@ struct GetHeaders : Message {
   FINAL_ENCODE
 };
 
+struct Inv : Message {
+  uint32_t type;
+  hash_t hash;
+
+  Inv() : Inv(Headers("inv")) {}
+  explicit Inv(const Headers &hdrs)
+      : Message(hdrs), type(0), hash(empty_hash) {}
+  FINAL_ENCODE
+};
+
 struct Mempool : Message {
   Mempool() : Mempool(Headers("mempool")) {}
   explicit Mempool(const Headers &hdrs) : Message(hdrs) {}
@@ -89,7 +99,7 @@ struct Ping : Message {
   uint64_t nonce;
 
   Ping() : Ping(Headers("ping")) {}
-  explicit Ping(const Headers &hdrs) : Message(hdrs) {}
+  explicit Ping(const Headers &hdrs) : Message(hdrs), nonce(0) {}
   FINAL_ENCODE
 };
 
@@ -97,7 +107,7 @@ struct Pong : Message {
   uint64_t nonce;
 
   Pong() : Pong(Headers("pong")) {}
-  explicit Pong(const Headers &hdrs) : Message(hdrs) {}
+  explicit Pong(const Headers &hdrs) : Message(hdrs), nonce(0) {}
   FINAL_ENCODE
 };
 
