@@ -47,7 +47,7 @@ void Client::lookup_seed(const std::string &seed) {
   request->on<uvw::AddrInfoEvent>([=](const auto &event, auto &) {
     for (const addrinfo *p = event.data.get(); p != nullptr; p = p->ai_next) {
       Addr addr(p);
-      known_peers_.insert(addr);
+      seed_peers_.insert(addr);
       log->debug("added new peer {} (via seed {})", addr, seed);
     }
     connect_to_peers();
@@ -60,12 +60,12 @@ void Client::connect_to_peers() {
     return;
   }
 
-  std::vector<Addr> peers(known_peers_.cbegin(), known_peers_.cend());
+  std::vector<Addr> peers(seed_peers_.cbegin(), seed_peers_.cend());
   shuffle(peers);
   while (connections_.size() < max_connections_ && !peers.empty()) {
     auto it = peers.begin();
     connect_to_peer(*it);
-    if (known_peers_.erase(*it) != 1) {
+    if (seed_peers_.erase(*it) != 1) {
       log->error("failed to erase known peer {}", *it);
     }
     peers.erase(it);

@@ -54,7 +54,7 @@ class Client {
 
  private:
   size_t max_connections_;
-  std::unordered_set<Addr> known_peers_;
+  std::unordered_set<Addr> seed_peers_;
   std::unordered_set<Connection> connections_;
   Buffer read_buf_;
 

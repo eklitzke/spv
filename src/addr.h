@@ -21,6 +21,7 @@
 #include <sys/types.h>
 
 #include <array>
+#include <chrono>
 #include <cstring>
 
 namespace spv {

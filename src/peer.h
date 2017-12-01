@@ -20,26 +20,30 @@
 #include <ostream>
 
 #include "./addr.h"
+#include "./util.h"
 
 namespace spv {
+
 struct Peer {
   uint32_t nonce;
   uint32_t services;
   uint32_t version;
   std::string user_agent;
   Addr addr;
+  time_point time;
 
-  Peer() : nonce(0), services(0), version(0) {}
+  Peer() : nonce(0), services(0), version(0), time(now()) {}
   explicit Peer(const Addr& addr)
-      : nonce(0), services(0), version(0), addr(addr) {}
+      : nonce(0), services(0), version(0), addr(addr), time(now()) {}
   Peer(uint32_t n, uint32_t s, uint32_t v, const std::string& ua)
-      : nonce(n), services(s), version(v), user_agent(ua) {}
+      : nonce(n), services(s), version(v), user_agent(ua), time(now()) {}
   Peer(const Peer& other)
       : nonce(other.nonce),
         services(other.services),
         version(other.version),
         user_agent(other.user_agent),
-        addr(other.addr) {}
+        addr(other.addr),
+        time(other.time) {}
 };
 }  // namespace spv
 

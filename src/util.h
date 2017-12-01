@@ -18,13 +18,18 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cstdint>
 #include <ctime>
 #include <random>
 #include <string>
 
 namespace spv {
+typedef std::chrono::time_point<std::chrono::system_clock> time_point;
+
 extern std::mt19937_64 g;
+
+inline time_point now() { return std::chrono::system_clock::now(); }
 
 // convert an array to hex (for debubbing/logging)
 template <size_t N>
