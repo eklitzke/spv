@@ -16,6 +16,7 @@
 
 #include "./connection.h"
 
+#include "./client.h"
 #include "./constants.h"
 #include "./logging.h"
 #include "./message.h"
@@ -26,11 +27,10 @@ MODULE_LOGGER
 
 const static std::chrono::seconds ping_interval(60);
 
-Connection::Connection(const Peer& us, Addr addr, uvw::Loop& loop)
-    : us_(us),
+Connection::Connection(Client* client, const Addr& addr)
+    : client_(client),
       peer_(addr),
-      loop_(loop),
-      tcp_(loop.resource<uvw::TcpHandle>()),
+      tcp_(client->loop_.resource<uvw::TcpHandle>()),
       ping_nonce_(0) {
   assert(!addr.ip().empty() && addr.port());
 }
@@ -114,17 +114,17 @@ void Connection::send_msg(const Message& msg) {
 void Connection::send_version() {
   Version ver;
   ver.version = PROTOCOL_VERSION;
-  ver.services = us_.services;
+  ver.services = client_->us_.services;
   ver.addr_recv.addr = peer_.addr;
-  ver.nonce = us_.nonce;
-  ver.user_agent = us_.user_agent;
+  ver.nonce = client_->us_.nonce;
+  ver.user_agent = client_->us_.user_agent;
   send_msg(ver);
 }
 
 void Connection::get_headers(std::vector<hash_t>& locator_hashes,
                              hash_t hash_stop) {
   GetHeaders req;
-  req.version = us_.version;
+  req.version = client_->us_.version;
   req.locator_hashes = locator_hashes;
   req.hash_stop = hash_stop;
   send_msg(req);
@@ -217,7 +217,7 @@ void Connection::handle_version(Version* ver) {
   send_msg(VerAck{});
 
   // set up a ping timer; TODO: require pongs
-  ping_ = loop_.resource<uvw::TimerHandle>();
+  ping_ = client_->loop_.resource<uvw::TimerHandle>();
   ping_->once<uvw::ErrorEvent>([](const auto&, auto& timer) {
     log->error("got error from ping timer");
     timer.close();
@@ -229,7 +229,7 @@ void Connection::handle_version(Version* ver) {
                ping_nonce_);
     send_msg(ping);
 
-    pong_ = loop_.resource<uvw::TimerHandle>();
+    pong_ = client_->loop_.resource<uvw::TimerHandle>();
     pong_->once<uvw::ErrorEvent>([this](const auto&, auto& timer) {
       log->error("got error from pong timer");
       pong_->close();

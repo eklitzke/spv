@@ -17,9 +17,12 @@
 #pragma once
 
 #include <cstddef>
+#include <memory>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 
+#include "./addr.h"
 #include "./buffer.h"
 #include "./config.h"
 #include "./connection.h"
@@ -35,6 +38,8 @@ class Addr;
 class Connection;
 
 class Client {
+  friend Connection;
+
  public:
   Client(uvw::Loop &loop, size_t max_connections)
       : max_connections_(max_connections),
@@ -49,12 +54,15 @@ class Client {
 
  private:
   size_t max_connections_;
-  Peer us_;
-  uvw::Loop &loop_;
   std::unordered_set<Addr> known_peers_;
   std::unordered_set<Connection> connections_;
   Buffer read_buf_;
 
+ protected:
+  Peer us_;
+  uvw::Loop &loop_;
+
+ private:
   // get peers from a dns seed
   void lookup_seed(const std::string &seed);
 
@@ -65,6 +73,6 @@ class Client {
   void connect_to_peer(const Addr &addr);
 
   // enqueue connections
-  void remove_connection(Connection &conn, bool reconnect = true);
+  void remove_connection(Connection &conn);
 };
 }  // namespace spv

@@ -29,7 +29,7 @@ Addr::Addr(const addrinfo *ai) : af_(ai->ai_family) {
   assert(ai->ai_family == ai->ai_addr->sa_family);
 
   char buf[INET6_ADDRSTRLEN];
-  memset(buf, 0, sizeof buf);
+  std::memset(buf, 0, sizeof buf);
 
   switch (af_) {
     case AF_INET: {
@@ -54,6 +54,7 @@ Addr::Addr(const addrinfo *ai) : af_(ai->ai_family) {
   }
   port_ = PROTOCOL_PORT;
   ip_ = buf;
+  assert(ip_.size() < INET6_ADDRSTRLEN);
 }
 
 const static std::array<uint8_t, 12> ipv4_prefix = {0, 0, 0, 0, 0,    0,
@@ -95,6 +96,7 @@ void Addr::set_addr(const addrbuf_t &buf) {
     return;
   }
   ip_ = s;
+  assert(ip_.size() < INET6_ADDRSTRLEN);
 }
 }  // namespace spv
 

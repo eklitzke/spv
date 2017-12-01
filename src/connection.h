@@ -34,16 +34,16 @@ class Addr;
 }  // namespace uvw
 
 namespace spv {
+class Client;
 class Connection {
+  friend Client;
+
  public:
   Connection() = delete;
-  Connection(const Peer& us, Addr them, uvw::Loop& loop);
+  Connection(Client* client_, const Addr& addr);
   Connection(const Connection& other) = delete;
 
   const Peer& peer() const { return peer_; }
-
-  inline uvw::TcpHandle* tcp() { return tcp_.get(); }
-  inline uvw::TcpHandle* operator->() { return tcp_.get(); }
 
   inline bool operator==(const Connection& other) const {
     return this == &other;
@@ -58,12 +58,14 @@ class Connection {
   void send_version();
 
  private:
+  Client* client_;
   Buffer buf_;
-  const Peer& us_;
   Peer peer_;
-  uvw::Loop& loop_;
+
+ protected:
   std::shared_ptr<uvw::TcpHandle> tcp_;
 
+ private:
   // heartbeat information
   uint64_t ping_nonce_;
   std::shared_ptr<uvw::TimerHandle> ping_;

@@ -75,7 +75,7 @@ void Client::connect_to_peers() {
 void Client::connect_to_peer(const Addr &addr) {
   log->debug("connecting to peer {}", addr);
 
-  auto pr = connections_.emplace(us_, addr, loop_);
+  auto pr = connections_.emplace(this, addr);
   assert(pr.second);
   Connection &conn = const_cast<Connection &>(*pr.first);
 
@@ -85,7 +85,7 @@ void Client::connect_to_peer(const Addr &addr) {
     if (auto t = weak_timer.lock()) t->close();
   };
 
-  conn->once<uvw::ErrorEvent>(
+  conn.tcp_->once<uvw::ErrorEvent>(
       [this, cancel_timer, &conn](const auto &exc, auto &c) {
         if (exc.code() == ECONNREFUSED) {
           log->debug("peer {} refused our TCP request", conn.peer());
@@ -96,20 +96,21 @@ void Client::connect_to_peer(const Addr &addr) {
         cancel_timer();
         remove_connection(conn);
       });
-  conn->on<uvw::DataEvent>([&](const auto &data, auto &) {
+  conn.tcp_->on<uvw::DataEvent>([&](const auto &data, auto &) {
     conn.read(data.data.get(), data.length);
   });
-  conn->once<uvw::CloseEvent>([=](const auto &, auto &) {
+  conn.tcp_->once<uvw::CloseEvent>([=](const auto &, auto &) {
     log->debug("closing connection {}", addr);
     cancel_timer();
+    connect_to_peers();
   });
-  conn->once<uvw::ConnectEvent>([=, &conn](const auto &, auto &) {
+  conn.tcp_->once<uvw::ConnectEvent>([=, &conn](const auto &, auto &) {
     log->info("connected to new peer {}", addr);
     cancel_timer();
-    conn->read();
+    conn.tcp_->read();
     conn.send_version();
   });
-  conn->once<uvw::EndEvent>([=, &conn](const auto &, auto &c) {
+  conn.tcp_->once<uvw::EndEvent>([=, &conn](const auto &, auto &c) {
     log->info("remote peer {} closed connection", addr);
     remove_connection(conn);
   });
@@ -126,8 +127,8 @@ void Client::connect_to_peer(const Addr &addr) {
   timer->start(std::chrono::seconds(1), NO_REPEAT);
 }
 
-void Client::remove_connection(Connection &conn, bool reconnect) {
-  if (conn->closing()) {
+void Client::remove_connection(Connection &conn) {
+  if (conn.tcp_->closing()) {
     log->debug("ignoring remove_connection for conn already in closing state");
     return;
   }
@@ -138,9 +139,6 @@ void Client::remove_connection(Connection &conn, bool reconnect) {
     return;
   }
 
-  conn->close();
-  if (reconnect) {
-    connect_to_peers();
-  }
+  conn.tcp_->close();
 }
 }  // namespace spv
