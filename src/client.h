@@ -42,6 +42,7 @@ class Client {
  public:
   Client(uvw::Loop &loop, size_t max_connections)
       : max_connections_(max_connections),
+        shutdown_(false),
         us_(rand64(), 0, PROTOCOL_VERSION, USER_AGENT),
         loop_(loop) {}
 
@@ -51,11 +52,14 @@ class Client {
   // Send the version message to these seeds.
   void run();
 
+  void shutdown();
+
  private:
   size_t max_connections_;
   std::unordered_set<Addr> seed_peers_;
   std::unordered_map<Addr, std::unique_ptr<Connection> > connections_;
   Buffer read_buf_;
+  bool shutdown_;
 
  protected:
   Peer us_;

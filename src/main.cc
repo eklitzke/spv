@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License along with
 // SPV. If not, see <http://www.gnu.org/licenses/>.
 
+#include <signal.h>
+
 #include <cstring>
 #include <iostream>
 #include <string>
@@ -27,7 +29,9 @@
 #include "./util.h"
 #include "./uvw.h"
 
-static const char usage_str[] = "Usage: spv [-h|--help] [-v|--version]\n";
+static std::unique_ptr<spv::Client> client;
+
+static void shutdown(int signal) { client->shutdown(); }
 
 int main(int argc, char** argv) {
   cxxopts::Options options("spv", "A simple SPV client.");
@@ -54,8 +58,13 @@ int main(int argc, char** argv) {
   }
 
   auto loop = uvw::Loop::getDefault();
-  spv::Client client(*loop, connections);
-  client.run();
+  client.reset(new spv::Client(*loop, connections));
+#if 0
+  // XXX: doesn't work yet
+  signal(SIGINT, shutdown);
+  signal(SIGTERM, shutdown);
+#endif
+  client->run();
 
   loop->run();
   loop->close();

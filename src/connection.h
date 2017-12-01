@@ -69,6 +69,9 @@ class Connection {
  protected:
   std::shared_ptr<uvw::TcpHandle> tcp_;
 
+  // close this connection (e.g. because we have a bad peer)
+  void shutdown();
+
  private:
   // heartbeat information
   uint64_t ping_nonce_;
@@ -80,9 +83,6 @@ class Connection {
 
   // send a message to our peer
   void send_msg(const Message& msg);
-
-  // close this connection (e.g. because we have a bad peer)
-  void shutdown();
 
   // request headers
   void get_headers(std::vector<hash_t>& locator_hashes,

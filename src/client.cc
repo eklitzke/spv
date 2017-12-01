@@ -56,7 +56,7 @@ void Client::lookup_seed(const std::string &seed) {
 }
 
 void Client::connect_to_peers() {
-  if (connections_.size() >= max_connections_) {
+  if (shutdown_ || connections_.size() >= max_connections_) {
     return;
   }
 
@@ -99,7 +99,7 @@ void Client::connect_to_peer(const Addr &addr) {
     conn->read(data.data.get(), data.length);
   });
   conn->tcp_->once<uvw::CloseEvent>([=](const auto &, auto &) {
-    log->debug("closing connection {}", addr);
+    log->warn("closed connection {}", addr);
     cancel_timer();
     connect_to_peers();
   });
@@ -132,5 +132,16 @@ void Client::remove_connection(const Addr &addr) {
   assert(it != connections_.end());
   it->second->tcp_->close();
   connections_.erase(it);
+}
+
+void Client::shutdown() {
+  if (!shutdown_) {
+    log->warn("shutting down client");
+    shutdown_ = true;
+
+    for (auto &pr : connections_) {
+      pr.second->shutdown();
+    }
+  }
 }
 }  // namespace spv

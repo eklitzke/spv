@@ -136,7 +136,10 @@ void Connection::get_headers(std::vector<hash_t>& locator_hashes,
   send_msg(req);
 }
 
-void Connection::shutdown() { log->error("shutdown not yet handled"); }
+void Connection::shutdown() {
+  log->warn("shutting down connection to peer {}", peer_);
+  tcp_->close();
+}
 
 void Connection::handle_addr(AddrMsg* addrs) {
   for (const auto& addr : addrs->addrs) {
