@@ -18,7 +18,7 @@
 
 #include <cstring>
 
-#include "PicoSHA2/picosha2.h"
+#include "picosha2/picosha2.h"
 
 namespace spv {
 void checksum(const char *data, size_t sz, std::array<char, 4> &out) {

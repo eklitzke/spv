@@ -22,13 +22,6 @@ coming soon.
 
 ## Compiling
 
-First fetch the third party build dependencies:
-
-```bash
-$ git submodule init
-$ git submodule update
-```
-
 To build `spv`, you'll need autoconf, automake, and a bleeding-edge C++17
 compiler:
 
@@ -49,7 +42,7 @@ Build dependencies:
  * pkg-config
  * [libuv](https://github.com/libuv/libuv) (version 1.x)
 
-Other dependencies/third party libs; these are all included as git submodules:
+Other dependencies/third party libs; these are all included as git subtrees:
 
  * [gabime/spdlog](https://github.com/gabime/spdlog)
  * [okdshin/PicoSHA2](https://github.com/okdshin/PicoSHA2)
