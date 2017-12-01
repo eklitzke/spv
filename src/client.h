@@ -35,7 +35,6 @@ class Loop;
 
 namespace spv {
 class Addr;
-class Connection;
 
 class Client {
   friend Connection;
@@ -55,7 +54,7 @@ class Client {
  private:
   size_t max_connections_;
   std::unordered_set<Addr> seed_peers_;
-  std::unordered_set<Connection> connections_;
+  std::unordered_map<Addr, std::unique_ptr<Connection> > connections_;
   Buffer read_buf_;
 
  protected:
@@ -73,6 +72,6 @@ class Client {
   void connect_to_peer(const Addr &addr);
 
   // enqueue connections
-  void remove_connection(Connection &conn);
+  void remove_connection(const Addr &addr);
 };
 }  // namespace spv

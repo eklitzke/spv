@@ -75,9 +75,9 @@ void Client::connect_to_peers() {
 void Client::connect_to_peer(const Addr &addr) {
   log->debug("connecting to peer {}", addr);
 
-  auto pr = connections_.emplace(this, addr);
+  Connection *conn = new Connection(this, addr);
+  auto pr = connections_.insert(std::make_pair(addr, conn));
   assert(pr.second);
-  Connection &conn = const_cast<Connection &>(*pr.first);
 
   auto timer = loop_.resource<uvw::TimerHandle>();
   auto weak_timer = timer->weak_from_this();
@@ -85,60 +85,52 @@ void Client::connect_to_peer(const Addr &addr) {
     if (auto t = weak_timer.lock()) t->close();
   };
 
-  conn.tcp_->once<uvw::ErrorEvent>(
-      [this, cancel_timer, &conn](const auto &exc, auto &c) {
-        if (exc.code() == ECONNREFUSED) {
-          log->debug("peer {} refused our TCP request", conn.peer());
-        } else {
-          log->warn("error from peer {}: {} {} {}", conn.peer(), exc.what(),
-                    exc.name(), exc.code());
-        }
-        cancel_timer();
-        remove_connection(conn);
-      });
-  conn.tcp_->on<uvw::DataEvent>([&](const auto &data, auto &) {
-    conn.read(data.data.get(), data.length);
+  conn->tcp_->once<uvw::ErrorEvent>([=](const auto &exc, auto &c) {
+    if (exc.code() == ECONNREFUSED) {
+      log->debug("peer {} refused our TCP request", conn->peer());
+    } else {
+      log->warn("error from peer {}: {} {} {}", conn->peer(), exc.what(),
+                exc.name(), exc.code());
+    }
+    cancel_timer();
+    remove_connection(addr);
   });
-  conn.tcp_->once<uvw::CloseEvent>([=](const auto &, auto &) {
+  conn->tcp_->on<uvw::DataEvent>([=](const auto &data, auto &) {
+    conn->read(data.data.get(), data.length);
+  });
+  conn->tcp_->once<uvw::CloseEvent>([=](const auto &, auto &) {
     log->debug("closing connection {}", addr);
     cancel_timer();
     connect_to_peers();
   });
-  conn.tcp_->once<uvw::ConnectEvent>([=, &conn](const auto &, auto &) {
+  conn->tcp_->once<uvw::ConnectEvent>([=](const auto &, auto &) {
     log->info("connected to new peer {}", addr);
     cancel_timer();
-    conn.tcp_->read();
-    conn.send_version();
+    conn->tcp_->read();
+    conn->send_version();
   });
-  conn.tcp_->once<uvw::EndEvent>([=, &conn](const auto &, auto &c) {
+  conn->tcp_->once<uvw::EndEvent>([=](const auto &, auto &c) {
     log->info("remote peer {} closed connection", addr);
-    remove_connection(conn);
+    remove_connection(addr);
   });
 
-  conn.connect();
+  conn->connect();
 
   timer->once<uvw::ErrorEvent>(
       [=](const auto &, auto &timer) { timer.close(); });
-  timer->on<uvw::TimerEvent>([this, &conn](const auto &, auto &timer) {
-    log->warn("connection to {} timed out", conn.peer());
-    remove_connection(conn);
+  timer->on<uvw::TimerEvent>([=](const auto &, auto &timer) {
+    log->warn("connection to {} timed out", conn->peer());
+    remove_connection(addr);
     timer.close();
   });
   timer->start(std::chrono::seconds(1), NO_REPEAT);
 }
 
-void Client::remove_connection(Connection &conn) {
-  if (conn.tcp_->closing()) {
-    log->debug("ignoring remove_connection for conn already in closing state");
-    return;
-  }
-
-  bool removed = connections_.erase(conn);
-  if (!removed) {
-    log->error("failed to remove connection to peer {}", conn.peer());
-    return;
-  }
-
-  conn.tcp_->close();
+void Client::remove_connection(const Addr &addr) {
+  log->warn("removing connection to {}", addr);
+  auto it = connections_.find(addr);
+  assert(it != connections_.end());
+  it->second->tcp_->close();
+  connections_.erase(it);
 }
 }  // namespace spv

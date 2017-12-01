@@ -100,12 +100,3 @@ class Connection {
   void handle_version(Version* ver);
 };
 }  // namespace spv
-
-namespace std {
-template <>
-struct hash<spv::Connection> {
-  std::size_t operator()(const spv::Connection& conn) const noexcept {
-    return std::hash<spv::Addr>{}(conn.peer().addr);
-  }
-};
-}  // namespace std
