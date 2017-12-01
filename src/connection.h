@@ -34,6 +34,13 @@ class Addr;
 }  // namespace uvw
 
 namespace spv {
+
+enum class ConnectionState {
+  NEED_VERSION = 1,
+  NEED_VERACK = 2,
+  CONNECTED = 3,
+};
+
 class Client;
 class Connection {
   friend Client;
@@ -44,10 +51,6 @@ class Connection {
   Connection(const Connection& other) = delete;
 
   const Peer& peer() const { return peer_; }
-
-  inline bool operator==(const Connection& other) const {
-    return this == &other;
-  }
 
   // establish the connection
   void connect();
@@ -61,6 +64,7 @@ class Connection {
   Client* client_;
   Buffer buf_;
   Peer peer_;
+  ConnectionState state_;
 
  protected:
   std::shared_ptr<uvw::TcpHandle> tcp_;

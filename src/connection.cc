@@ -30,6 +30,7 @@ const static std::chrono::seconds ping_interval(60);
 Connection::Connection(Client* client, const Addr& addr)
     : client_(client),
       peer_(addr),
+      state_(ConnectionState::NEED_VERSION),
       tcp_(client->loop_.resource<uvw::TcpHandle>()),
       ping_nonce_(0) {
   assert(!addr.ip().empty() && addr.port());
@@ -68,6 +69,11 @@ bool Connection::read_message() {
   if (msg.get() != nullptr) {
     const std::string& cmd = msg->headers.command;
     log->info("message '{}' from peer {}", cmd, peer_);
+
+    if (cmd != "version" && cmd != "verack") {
+      assert(state_ == ConnectionState::CONNECTED);
+    }
+
     if (cmd == "addr") {
       handle_addr(dynamic_cast<AddrMsg*>(msg.get()));
     } else if (cmd == "getaddr") {
@@ -134,7 +140,7 @@ void Connection::shutdown() { log->error("shutdown not yet handled"); }
 
 void Connection::handle_addr(AddrMsg* addrs) {
   for (const auto& addr : addrs->addrs) {
-    log->debug("peer sent us new addr {}", addr.addr);
+    log->info("peer {} sent us new addr {}", peer_, addr.addr);
   }
 }
 void Connection::handle_getaddr(GetAddr* addr) {
@@ -205,14 +211,20 @@ void Connection::handle_unknown(const std::string& cmd) {
 }
 
 void Connection::handle_verack(VerAck* ack) {
+  assert(state_ == ConnectionState::NEED_VERACK);
+  state_ = ConnectionState::CONNECTED;
   log->debug("ignoring verack message");
 }
 
 void Connection::handle_version(Version* ver) {
+  assert(state_ == ConnectionState::NEED_VERSION);
+  state_ = ConnectionState::NEED_VERACK;
+
   peer_.nonce = ver->nonce;
   peer_.services = ver->services;
   peer_.user_agent = ver->user_agent;
   peer_.version = ver->version;
+  peer_.time = now();
   log->info("finished handshake with peer {}", peer_);
   send_msg(VerAck{});
 

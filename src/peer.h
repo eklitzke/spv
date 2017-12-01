@@ -32,11 +32,11 @@ struct Peer {
   Addr addr;
   time_point time;
 
-  Peer() : nonce(0), services(0), version(0), time(now()) {}
+  Peer() : nonce(0), services(0), version(0) {}
   explicit Peer(const Addr& addr)
-      : nonce(0), services(0), version(0), addr(addr), time(now()) {}
+      : nonce(0), services(0), version(0), addr(addr) {}
   Peer(uint32_t n, uint32_t s, uint32_t v, const std::string& ua)
-      : nonce(n), services(s), version(v), user_agent(ua), time(now()) {}
+      : nonce(n), services(s), version(v), user_agent(ua) {}
   Peer(const Peer& other)
       : nonce(other.nonce),
         services(other.services),
