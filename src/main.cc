@@ -14,12 +14,12 @@
 // You should have received a copy of the GNU General Public License along with
 // SPV. If not, see <http://www.gnu.org/licenses/>.
 
-#include <getopt.h>
-
 #include <cstring>
 #include <iostream>
 #include <string>
 #include <vector>
+
+#include "./cxxopts.hpp"
 
 #include "./client.h"
 #include "./config.h"
@@ -30,46 +30,31 @@
 static const char usage_str[] = "Usage: spv [-h|--help] [-v|--version]\n";
 
 int main(int argc, char** argv) {
-  static const char short_opts[] = "c:dhv";
-  static struct option long_opts[] = {
-      {"debug", no_argument, 0, 'd'},
-      {"help", no_argument, 0, 'h'},
-      {"max-connections", required_argument, 0, 'c'},
-      {"version", no_argument, 0, 'v'},
-      {0, 0, 0, 0}};
+  cxxopts::Options options("spv", "A simple SPV client.");
+  options.add_options()("d,debug", "Enable debugging")(
+      "c,connections", "Max connections to make",
+      cxxopts::value<std::size_t>()->default_value("4"))(
+      "h,help", "Print help information")("v,version",
+                                          "Print version information");
 
-  size_t max_connections = 4;
-  for (;;) {
-    int c = getopt_long(argc, argv, short_opts, long_opts, nullptr);
-    if (c == -1) {
-      break;
+  std::size_t connections;
+  try {
+    auto args = options.parse(argc, argv);
+    if (args.count("help")) {
+      std::cout << options.help();
+      return 0;
     }
-    switch (c) {
-      case 'c':
-        max_connections = std::strtoul(optarg, nullptr, 10);
-        break;
-      case 'd':
-        spdlog::set_level(spdlog::level::debug);
-        break;
-      case 'h':
-        std::cout << PACKAGE_STRING << "\n\n" << usage_str;
-        return 0;
-        break;
-      case 'v':
-        std::cout << PACKAGE_STRING << "\n";
-        return 0;
-        break;
-      case '?':
-        // getopt_long should already have printed an error message
-        break;
-      default:
-        std::cerr << "unrecognized command line flag: " << optarg << "\n";
-        abort();
+    if (args.count("debug")) {
+      spdlog::set_level(spdlog::level::debug);
     }
+    connections = args["connections"].as<std::size_t>();
+  } catch (const cxxopts::option_not_exists_exception& exc) {
+    std::cerr << exc.what() << "\n\n" << options.help();
+    return 1;
   }
 
   auto loop = uvw::Loop::getDefault();
-  spv::Client client(*loop, max_connections);
+  spv::Client client(*loop, connections);
   client.run();
 
   loop->run();

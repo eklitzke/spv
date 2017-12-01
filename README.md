@@ -45,6 +45,7 @@ Build dependencies:
 Other dependencies/third party libs; these are all included as git subtrees:
 
  * [gabime/spdlog](https://github.com/gabime/spdlog)
+ * [jarro2783/cxxopts](https://github.com/jarro2783/cxxopts)
  * [okdshin/PicoSHA2](https://github.com/okdshin/PicoSHA2)
  * [skypjack/uvw](https://github.com/skypjack/uvw)
 
