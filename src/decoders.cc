@@ -193,7 +193,7 @@ struct Decoder {
 
   void pull(hash_t &hash) { pull_buf(hash.data(), sizeof hash); }
 
-  void pull(BlockHeader &hdr) {
+  void pull(BlockHeader &hdr, bool pull_tx = true) {
     size_t start = off_;
     pull(hdr.version);
     pull(hdr.prev_block);
@@ -203,11 +203,13 @@ struct Decoder {
     pull(hdr.nonce);
 
     // calculate the hash of this block
-    hdr.block_hash = pow_hash(data_ + start, off_ - start);
+    hdr.block_hash = pow_hash(data_ + start, off_ - start, true);
 
-    uint64_t txn_count;
-    pull_varint(txn_count);
-    assert(txn_count == 0);
+    if (pull_tx) {
+      uint64_t txn_count;
+      pull_varint(txn_count);
+      assert(txn_count == 0);
+    }
   }
 };
 
@@ -437,6 +439,19 @@ std::unique_ptr<Message> decode_message(const char *data, size_t size,
     log->warn("bad p2p message parse: {}", exc.what());
   }
   return nullptr;
+}
+
+BlockHeader BlockHeader::genesis() {
+  BlockHeader hdr;
+  Decoder dec(reinterpret_cast<const char *>(genesis_block_hdr.data()),
+              genesis_block_hdr.size());
+  dec.pull(hdr, false);
+  const hash_t genesis_hash{0x00, 0x00, 0x00, 0x00, 0x09, 0x33, 0xea, 0x01,
+                            0xad, 0x0e, 0xe9, 0x84, 0x20, 0x97, 0x79, 0xba,
+                            0xae, 0xc3, 0xce, 0xd9, 0x0f, 0xa3, 0xf4, 0x08,
+                            0x71, 0x95, 0x26, 0xf8, 0xd7, 0x7f, 0x49, 0x43};
+  assert(hdr.block_hash == genesis_hash);
+  return hdr;
 }
 
 }  // namespace spv

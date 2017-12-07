@@ -16,15 +16,22 @@
 
 #include "./pow.h"
 
+#include <endian.h>
 #include <cstring>
 
 #include "picosha2/picosha2.h"
 
 namespace spv {
-hash_t pow_hash(const char *data, size_t sz) {
+hash_t pow_hash(const char *data, size_t sz, bool big_endian) {
   hash_t hash1, hash2;
   picosha2::hash256(data, data + sz, hash1);
   picosha2::hash256(hash1, hash2);
+
+  // XXX: technically we should only call this if we know we're on a LE host
+  if (__BYTE_ORDER == __LITTLE_ENDIAN && big_endian) {
+    std::reverse(hash2.begin(), hash2.end());
+  }
+
   return hash2;
 }
 

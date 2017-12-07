@@ -38,4 +38,13 @@ std::string to_hex(const char* data, size_t nbytes) {
   }
   return output;
 }
+
+std::string to_hex(const std::string& str) {
+  std::string output;
+  output.reserve(2 * str.size());
+  for (const auto& c : str) {
+    hex_encode(c, output);
+  }
+  return output;
+}
 }

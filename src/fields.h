@@ -93,7 +93,9 @@ struct BlockHeader {
         block_hash(other.block_hash) {}
 
   inline bool empty() const { return merkle_root == empty_hash; }
-  inline bool is_genesis_block() const { return merkle_root == genesis_root; }
+
+  // implemented in decoders.cc
+  static BlockHeader genesis();
 };
 
 struct VersionNetAddr {

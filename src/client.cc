@@ -33,6 +33,12 @@ static const std::vector<std::string> testSeeds = {
     "testnet-seed.bluematt.me",
 };
 
+Client::Client(uvw::Loop &loop, size_t max_connections)
+    : max_connections_(max_connections),
+      shutdown_(false),
+      us_(rand64(), 0, PROTOCOL_VERSION, USER_AGENT),
+      loop_(loop) {}
+
 void Client::run() {
   log->debug("connecting to network as {}", us_.user_agent);
   for (const auto &seed : testSeeds) {
@@ -148,21 +154,11 @@ void Client::shutdown() {
   }
 }
 
-void Client::notify_connected(Connection *conn) {
-  if (chain_.empty()) {
-    log->error("fetching genesis hash");
-    std::vector<hash_t> needed{genesis_hash};
-    conn->get_headers(needed);
-  }
-}
+void Client::notify_connected(Connection *conn) { log->info("connected conn"); }
 
 void Client::notify_headers(const std::vector<BlockHeader> &block_headers) {
   for (const auto &hdr : block_headers) {
-    log->debug("got block {}", hdr);
-    if (chain_.empty() && hdr.is_genesis_block()) {
-      log->error("we got the genesis block!");
-      chain_.set_hdr(hdr);
-    }
+    log->debug("new block headers: {}", hdr);
   }
 }
 }  // namespace spv

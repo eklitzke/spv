@@ -27,9 +27,11 @@
 namespace {
 template <typename T>
 inline void hex_encode(T byte, std::string& output) {
+  static_assert(sizeof(T) == 1);
   static const char* const lut = "0123456789abcdef";
-  output.push_back(lut[byte >> 4]);
-  output.push_back(lut[byte & 15]);
+  uint8_t b = static_cast<uint8_t>(byte);
+  output.push_back(lut[b >> 4]);
+  output.push_back(lut[b & 15]);
 }
 }
 
@@ -51,6 +53,7 @@ std::string to_hex(const std::array<uint8_t, N>& arr) {
   return output;
 }
 
+std::string to_hex(const std::string& str);
 std::string to_hex(const char* data, size_t nbytes);
 
 // generate a random uint64_t value

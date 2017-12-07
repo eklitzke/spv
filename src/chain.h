@@ -21,9 +21,13 @@
 #include "./fields.h"
 
 namespace spv {
+class Client;
+
 class Chain {
+  friend Client;
+
  public:
-  Chain() : height_(0) {}
+  Chain(const Chain &other) = delete;
   Chain(size_t height, const BlockHeader &hdr) : height_(height), hdr_(hdr) {}
 
   inline bool empty() const { return height_ == 0 && hdr_.empty(); }
@@ -38,5 +42,8 @@ class Chain {
   size_t height_;
   BlockHeader hdr_;
   std::vector<std::unique_ptr<Chain>> children_;
+
+ protected:
+  Chain() : height_(0), hdr_(BlockHeader::genesis()) {}
 };
 }  // namespace spv

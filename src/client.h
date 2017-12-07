@@ -41,12 +41,7 @@ class Client {
   friend Connection;
 
  public:
-  Client(uvw::Loop &loop, size_t max_connections)
-      : max_connections_(max_connections),
-        shutdown_(false),
-        us_(rand64(), 0, PROTOCOL_VERSION, USER_AGENT),
-        loop_(loop) {}
-
+  Client(uvw::Loop &loop, size_t max_connections);
   Client() = delete;
   Client(const Client &other) = delete;
 
