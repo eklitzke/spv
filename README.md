@@ -15,10 +15,8 @@ This code is considered **alpha** and incomplete. To avoid being a nuisance to
 the network, the client is currently hard-coded to connect to testnet.
 
 Currently the client can connect to the peers via the DNS seed list, and
-send/receive most important P2P message types. The current focus is making the
-P2P behavior of the client more complete, and more similar to the reference
-client. Logic to actually validate headers/blocks/transactions is missing, but
-coming soon.
+initiate header sync, downloading the full set of block headers starting from
+the genesis block.
 
 ## Compiling
 
