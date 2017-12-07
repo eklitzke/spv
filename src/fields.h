@@ -71,6 +71,7 @@ struct BlockHeader {
   uint8_t tx_count;  // should always be zero
 
   // not encoded, for internal use only
+  size_t height;
   hash_t block_hash;
 
   BlockHeader()
@@ -81,6 +82,7 @@ struct BlockHeader {
         difficulty(0),
         nonce(0),
         tx_count(0),
+        height(0),
         block_hash(empty_hash) {}
   BlockHeader(const BlockHeader &other)
       : version(other.version),
@@ -90,9 +92,8 @@ struct BlockHeader {
         difficulty(other.difficulty),
         nonce(other.nonce),
         tx_count(other.tx_count),
+        height(other.height),
         block_hash(other.block_hash) {}
-
-  inline bool empty() const { return merkle_root == empty_hash; }
 
   // implemented in decoders.cc
   static BlockHeader genesis();

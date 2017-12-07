@@ -14,35 +14,26 @@
 // You should have received a copy of the GNU General Public License along with
 // SPV. If not, see <http://www.gnu.org/licenses/>.
 
-#pragma once
-
-#include <memory>
-
-#include "./fields.h"
+#include "./chain.h"
 
 namespace spv {
-class Client;
+void Chain::add_child(const BlockHeader &hdr) {
+  // this is kind of gross
+  std::unique_ptr<Chain> child(new Chain(hdr, hdr_.height + 1));
+  children_.emplace_back(std::move(child));
+}
 
-class Chain {
-  friend Client;
-
- public:
-  Chain(const Chain &other) = delete;
-  Chain(const BlockHeader &hdr, size_t height) : hdr_(hdr) {
-    hdr_.height = height;
+BlockHeader Chain::tip() const {
+  BlockHeader best_hdr = hdr_;
+  for (const auto &child : children_) {
+    child->tip_helper(best_hdr);
   }
+  return best_hdr;
+}
 
-  BlockHeader tip() const;
-
-  void add_child(const BlockHeader &hdr);
-
- private:
-  BlockHeader hdr_;
-  std::vector<std::unique_ptr<Chain>> children_;
-
-  void tip_helper(BlockHeader &hdr) const;
-
- protected:
-  Chain() : hdr_(BlockHeader::genesis()) {}
-};
+void Chain::tip_helper(BlockHeader &hdr) const {
+  if (hdr_.height > hdr.height) {
+    hdr = hdr_;
+  }
+}
 }  // namespace spv
