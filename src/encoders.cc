@@ -119,6 +119,16 @@ class Encoder : public Buffer {
 
   void push(const hash_t &hash) { append(hash.data(), sizeof hash); }
 
+  void push(const BlockHeader &hdr) {
+    push(hdr.version);
+    push(hdr.prev_block);
+    push(hdr.merkle_root);
+    push(hdr.timestamp);
+    push(hdr.difficulty);
+    push(hdr.nonce);
+    push_varint(0);
+  }
+
   void finish_headers() {
     // insert the length
     uint32_t len = htole32(size() - HEADER_SIZE);

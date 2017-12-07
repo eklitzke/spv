@@ -138,7 +138,20 @@ void Connection::get_headers(std::vector<hash_t>& locator_hashes,
 
 void Connection::shutdown() {
   log->warn("shutting down connection to peer {}", peer_);
-  tcp_->close();
+  if (ping_) {
+    ping_->stop();
+    ping_->close();
+    ping_.reset();
+  }
+  if (pong_) {
+    pong_->stop();
+    pong_->close();
+    pong_.reset();
+  }
+  if (tcp_) {
+    tcp_->close();
+    tcp_.reset();
+  }
 }
 
 void Connection::handle_addr(AddrMsg* addrs) {
@@ -160,9 +173,7 @@ void Connection::handle_getheaders(GetHeaders* headers) {
 
 void Connection::handle_headers(HeadersMsg* msg) {
   log->info("headers message with {} block headers", msg->block_headers.size());
-  for (const auto& block_hdr : msg->block_headers) {
-    log->info("new header: {}", array_to_hex(block_hdr));
-  }
+  client_->notify_headers(msg->block_headers);
 }
 
 void Connection::handle_mempool(Mempool* pool) {
@@ -170,8 +181,7 @@ void Connection::handle_mempool(Mempool* pool) {
 }
 
 void Connection::handle_inv(Inv* inv) {
-  log->info("inv message with type {}, hash {}", inv->type,
-            array_to_hex(inv->hash));
+  log->info("inv message with type {}, hash {}", inv->type, to_hex(inv->hash));
 }
 
 void Connection::handle_ping(Ping* ping) {
@@ -257,11 +267,8 @@ void Connection::handle_version(Version* ver) {
   });
   ping_->start(ping_interval, ping_interval);
 
-#if 0
-  // Need to update code before spamming the network with this.
-  std::vector<hash_t> needed{genesis_hash};
-  get_headers(needed);
-#endif
+  // tell the client that we're ready to fetch headers
+  client_->notify_connected(this);
 }
 
 }  // namespace spv

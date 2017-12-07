@@ -17,6 +17,7 @@
 #pragma once
 
 #include <cstddef>
+#include <ostream>
 #include <string>
 
 #include "./addr.h"
@@ -69,6 +70,9 @@ struct BlockHeader {
   uint32_t nonce;
   uint8_t tx_count;  // should always be zero
 
+  // not encoded, for internal use only
+  hash_t block_hash;
+
   BlockHeader()
       : version(0),
         prev_block(empty_hash),
@@ -76,7 +80,8 @@ struct BlockHeader {
         timestamp(0),
         difficulty(0),
         nonce(0),
-        tx_count(0) {}
+        tx_count(0),
+        block_hash(empty_hash) {}
   BlockHeader(const BlockHeader &other)
       : version(other.version),
         prev_block(other.prev_block),
@@ -84,7 +89,11 @@ struct BlockHeader {
         timestamp(other.timestamp),
         difficulty(other.difficulty),
         nonce(other.nonce),
-        tx_count(other.tx_count) {}
+        tx_count(other.tx_count),
+        block_hash(other.block_hash) {}
+
+  inline bool empty() const { return merkle_root == empty_hash; }
+  inline bool is_genesis_block() const { return merkle_root == genesis_root; }
 };
 
 struct VersionNetAddr {
@@ -106,3 +115,5 @@ struct NetAddr {
       : time(other.time), services(other.services), addr(other.addr) {}
 };
 }  // namespace spv
+
+std::ostream &operator<<(std::ostream &o, const spv::BlockHeader &hdr);

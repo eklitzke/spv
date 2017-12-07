@@ -19,7 +19,10 @@
 #include <array>
 #include <cstdint>
 
+#include "./constants.h"
+
 namespace spv {
+hash_t pow_hash(const char *data, size_t sz);
 void checksum(const char *data, size_t sz, std::array<char, 4> &out);
 uint32_t checksum(const char *data, size_t sz);
 }  // namespace spv

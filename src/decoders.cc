@@ -192,6 +192,23 @@ struct Decoder {
   }
 
   void pull(hash_t &hash) { pull_buf(hash.data(), sizeof hash); }
+
+  void pull(BlockHeader &hdr) {
+    size_t start = off_;
+    pull(hdr.version);
+    pull(hdr.prev_block);
+    pull(hdr.merkle_root);
+    pull(hdr.timestamp);
+    pull(hdr.difficulty);
+    pull(hdr.nonce);
+
+    // calculate the hash of this block
+    hdr.block_hash = pow_hash(data_ + start, off_ - start);
+
+    uint64_t txn_count;
+    pull_varint(txn_count);
+    assert(txn_count == 0);
+  }
 };
 
 typedef std::function<std::unique_ptr<Message>(Decoder &, const Headers &)>
@@ -304,9 +321,9 @@ DECLARE_PARSER(headers, [](auto &dec, const auto &hdrs) {
     throw BadMessage(os.str());
   }
   for (size_t i = 0; i < count; i++) {
-    hash_t hash;
-    dec.pull(hash);
-    msg->block_headers.push_back(hash);
+    BlockHeader hdr;
+    dec.pull(hdr);
+    msg->block_headers.push_back(hdr);
   }
   return msg;
 });

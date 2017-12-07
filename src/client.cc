@@ -144,4 +144,22 @@ void Client::shutdown() {
     }
   }
 }
+
+void Client::notify_connected(Connection *conn) {
+  if (chain_.empty()) {
+    log->error("fetching genesis hash");
+    std::vector<hash_t> needed{genesis_hash};
+    conn->get_headers(needed);
+  }
+}
+
+void Client::notify_headers(const std::vector<BlockHeader> &block_headers) {
+  for (const auto &hdr : block_headers) {
+    log->debug("got block {}", hdr);
+    if (chain_.empty() && hdr.is_genesis_block()) {
+      log->error("we got the genesis block!");
+      chain_.set_hdr(hdr);
+    }
+  }
+}
 }  // namespace spv

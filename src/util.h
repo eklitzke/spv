@@ -24,6 +24,15 @@
 #include <random>
 #include <string>
 
+namespace {
+template <typename T>
+inline void hex_encode(T byte, std::string& output) {
+  static const char* const lut = "0123456789abcdef";
+  output.push_back(lut[byte >> 4]);
+  output.push_back(lut[byte & 15]);
+}
+}
+
 namespace spv {
 typedef std::chrono::time_point<std::chrono::system_clock> time_point;
 
@@ -33,17 +42,16 @@ inline time_point now() { return std::chrono::system_clock::now(); }
 
 // convert an array to hex (for debubbing/logging)
 template <size_t N>
-std::string array_to_hex(const std::array<uint8_t, N>& arr) {
-  static const char* const lut = "0123456789abcdef";
-
+std::string to_hex(const std::array<uint8_t, N>& arr) {
   std::string output;
   output.reserve(2 * N);
   for (const auto& c : arr) {
-    output.push_back(lut[c >> 4]);
-    output.push_back(lut[c & 15]);
+    hex_encode(c, output);
   }
   return output;
 }
+
+std::string to_hex(const char* data, size_t nbytes);
 
 // generate a random uint64_t value
 uint64_t rand64();

@@ -49,6 +49,7 @@ class Connection {
   Connection() = delete;
   Connection(Client* client_, const Addr& addr);
   Connection(const Connection& other) = delete;
+  ~Connection() { shutdown(); }
 
   const Peer& peer() const { return peer_; }
 

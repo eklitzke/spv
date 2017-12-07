@@ -14,28 +14,29 @@
 // You should have received a copy of the GNU General Public License along with
 // SPV. If not, see <http://www.gnu.org/licenses/>.
 
-#include "./util.h"
+#pragma once
 
-#include <limits>
-#include <random>
+#include <memory>
 
-namespace {
-std::random_device rd;
-std::uniform_int_distribution<uint64_t> dist(
-    0, std::numeric_limits<uint64_t>::max());
-}
+#include "./fields.h"
 
 namespace spv {
-std::mt19937_64 g(rd());
+class Chain {
+ public:
+  Chain() : height_(0) {}
+  Chain(size_t height, const BlockHeader &hdr) : height_(height), hdr_(hdr) {}
 
-uint64_t rand64() { return dist(g); }
+  inline bool empty() const { return height_ == 0 && hdr_.empty(); }
 
-std::string to_hex(const char* data, size_t nbytes) {
-  std::string output;
-  output.reserve(2 * nbytes);
-  for (size_t i = 0; i < nbytes; i++) {
-    hex_encode(*(data + i), output);
+  void set_hdr(const BlockHeader &hdr) { hdr_ = hdr; }
+
+  void add_child(const BlockHeader &hdr) {
+    // children_.emplace_back(height_ + 1, hdr);
   }
-  return output;
-}
-}
+
+ private:
+  size_t height_;
+  BlockHeader hdr_;
+  std::vector<std::unique_ptr<Chain>> children_;
+};
+}  // namespace spv

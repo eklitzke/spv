@@ -21,11 +21,16 @@
 #include "picosha2/picosha2.h"
 
 namespace spv {
-void checksum(const char *data, size_t sz, std::array<char, 4> &out) {
-  std::array<unsigned char, 32> hash1, hash2;
+hash_t pow_hash(const char *data, size_t sz) {
+  hash_t hash1, hash2;
   picosha2::hash256(data, data + sz, hash1);
   picosha2::hash256(hash1, hash2);
-  std::memcpy(out.data(), hash2.data(), 4);
+  return hash2;
+}
+
+void checksum(const char *data, size_t sz, std::array<char, 4> &out) {
+  hash_t hash = pow_hash(data, sz);
+  std::memcpy(out.data(), hash.data(), 4);
 }
 
 uint32_t checksum(const char *data, size_t sz) {

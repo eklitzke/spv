@@ -23,6 +23,8 @@
 
 #define EXTERN_LOGGER(name) extern std::shared_ptr<spdlog::logger> name##_log;
 
-#define MODULE_LOGGER                          \
-  static std::shared_ptr<spdlog::logger> log = \
+#define DECLARE_LOGGER(name)                    \
+  static std::shared_ptr<spdlog::logger> name = \
       spdlog::stdout_color_st(__FILE__);
+
+#define MODULE_LOGGER DECLARE_LOGGER(log)

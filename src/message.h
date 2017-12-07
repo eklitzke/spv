@@ -95,7 +95,7 @@ struct GetHeaders : Message {
 };
 
 struct HeadersMsg : Message {
-  std::vector<hash_t> block_headers;
+  std::vector<BlockHeader> block_headers;
 
   HeadersMsg() : HeadersMsg(Headers("headers")) {}
   explicit HeadersMsg(const Headers &hdrs) : Message(hdrs) {}

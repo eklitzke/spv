@@ -24,6 +24,7 @@
 
 #include "./addr.h"
 #include "./buffer.h"
+#include "./chain.h"
 #include "./config.h"
 #include "./connection.h"
 #include "./peer.h"
@@ -60,10 +61,19 @@ class Client {
   std::unordered_map<Addr, std::unique_ptr<Connection> > connections_;
   Buffer read_buf_;
   bool shutdown_;
+  Chain chain_;
 
  protected:
   Peer us_;
   uvw::Loop &loop_;
+
+  // Connections call this method to notify the client that they've finished
+  // connecting (meaning they've finished the version handshake). Then the
+  // client will ask the connections for more block headers.
+  void notify_connected(Connection *conn);
+
+  // Add headers to the local copy of the chain.
+  void notify_headers(const std::vector<BlockHeader> &block_headers);
 
  private:
   // get peers from a dns seed

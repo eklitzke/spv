@@ -14,28 +14,12 @@
 // You should have received a copy of the GNU General Public License along with
 // SPV. If not, see <http://www.gnu.org/licenses/>.
 
-#include "./util.h"
+#include "./fields.h"
 
-#include <limits>
-#include <random>
+#include <algorithm>
 
-namespace {
-std::random_device rd;
-std::uniform_int_distribution<uint64_t> dist(
-    0, std::numeric_limits<uint64_t>::max());
-}
-
-namespace spv {
-std::mt19937_64 g(rd());
-
-uint64_t rand64() { return dist(g); }
-
-std::string to_hex(const char* data, size_t nbytes) {
-  std::string output;
-  output.reserve(2 * nbytes);
-  for (size_t i = 0; i < nbytes; i++) {
-    hex_encode(*(data + i), output);
-  }
-  return output;
-}
+std::ostream &operator<<(std::ostream &o, const spv::BlockHeader &hdr) {
+  std::string hash = spv::to_hex(hdr.block_hash);
+  std::reverse(hash.begin(), hash.end());
+  return o << "Block(" << hash << ")";
 }

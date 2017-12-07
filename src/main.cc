@@ -17,7 +17,6 @@
 #include <signal.h>
 
 #include <cstring>
-#include <iostream>
 #include <string>
 #include <vector>
 
@@ -31,7 +30,18 @@
 
 static std::unique_ptr<spv::Client> client;
 
-static void shutdown(int signal) { client->shutdown(); }
+namespace {
+DECLARE_LOGGER(main_log)
+}
+
+static void shutdown(int signal) {
+  client->shutdown();
+  auto loop = uvw::Loop::getDefault();
+  loop->walk([](uvw::BaseHandle& h) {
+    main_log->warn("closing loop handle");
+    h.close();
+  });
+}
 
 int main(int argc, char** argv) {
   cxxopts::Options options("spv", "A simple SPV client.");
@@ -59,7 +69,7 @@ int main(int argc, char** argv) {
 
   auto loop = uvw::Loop::getDefault();
   client.reset(new spv::Client(*loop, connections));
-#if 0
+#if 1
   // XXX: doesn't work yet
   signal(SIGINT, shutdown);
   signal(SIGTERM, shutdown);
