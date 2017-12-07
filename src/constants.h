@@ -57,3 +57,17 @@ const std::array<uint8_t, 80> genesis_block_hdr{
 }  // namespace spv
 
 std::ostream &operator<<(std::ostream &o, const spv::hash_t &h);
+
+namespace std {
+template <>
+struct hash<spv::hash_t> {
+  std::size_t operator()(const spv::hash_t &input) const noexcept {
+    std::size_t h = 0;
+    const size_t *data = reinterpret_cast<const size_t *>(input.data());
+    for (size_t i = 0; i < sizeof(spv::hash_t) / sizeof(size_t); i++) {
+      h |= std::hash<size_t>{}(*(data + i));
+    }
+    return h;
+  }
+};
+}  // namespace std

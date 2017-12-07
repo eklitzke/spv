@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include <memory>
+#include <unordered_map>
 
 #include "./fields.h"
 
@@ -28,21 +28,19 @@ class Chain {
 
  public:
   Chain(const Chain &other) = delete;
-  Chain(const BlockHeader &hdr, size_t height) : hdr_(hdr) {
-    hdr_.height = height;
-  }
 
-  BlockHeader tip() const;
+  void add_block(const BlockHeader &hdr);
 
-  void add_child(const BlockHeader &hdr);
+  const BlockHeader &tip() const { return tip_; }
 
  private:
-  BlockHeader hdr_;
-  std::vector<std::unique_ptr<Chain>> children_;
-
-  void tip_helper(BlockHeader &hdr) const;
+  std::unordered_map<hash_t, BlockHeader> headers_;
+  BlockHeader tip_;
 
  protected:
-  Chain() : hdr_(BlockHeader::genesis()) {}
+  Chain() {
+    auto genesis = BlockHeader::genesis();
+    headers_.emplace(genesis.block_hash, genesis);
+  }
 };
 }  // namespace spv

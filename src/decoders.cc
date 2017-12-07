@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License along with
 // SPV. If not, see <http://www.gnu.org/licenses/>.
 
+#include <algorithm>
 #include <exception>
 #include <memory>
 #include <sstream>
@@ -191,7 +192,10 @@ struct Decoder {
     pull(addr.addr);
   }
 
-  void pull(hash_t &hash) { pull_buf(hash.data(), sizeof hash); }
+  void pull(hash_t &hash) {
+    pull_buf(hash.data(), sizeof hash);
+    std::reverse(hash.begin(), hash.end());
+  }
 
   void pull(BlockHeader &hdr, bool pull_tx = true) {
     size_t start = off_;

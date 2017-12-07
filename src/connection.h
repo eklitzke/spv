@@ -73,6 +73,10 @@ class Connection {
   // close this connection (e.g. because we have a bad peer)
   void shutdown();
 
+  // request headers
+  void get_headers(std::vector<hash_t>& locator_hashes,
+                   hash_t hash_stop = empty_hash);
+
  private:
   // heartbeat information
   uint64_t ping_nonce_;
@@ -84,10 +88,6 @@ class Connection {
 
   // send a message to our peer
   void send_msg(const Message& msg);
-
-  // request headers
-  void get_headers(std::vector<hash_t>& locator_hashes,
-                   hash_t hash_stop = empty_hash);
 
   void handle_addr(AddrMsg* addrs);
   void handle_getaddr(GetAddr* getaddr);

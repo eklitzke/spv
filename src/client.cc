@@ -154,11 +154,15 @@ void Client::shutdown() {
   }
 }
 
-void Client::notify_connected(Connection *conn) { log->info("connected conn"); }
+void Client::notify_connected(Connection *conn) {
+  auto genesis = BlockHeader::genesis();
+  std::vector<hash_t> needed{genesis.block_hash};
+  conn->get_headers(needed);
+}
 
 void Client::notify_headers(const std::vector<BlockHeader> &block_headers) {
   for (const auto &hdr : block_headers) {
-    log->debug("new block headers: {}", hdr);
+    chain_.add_block(hdr);
   }
 }
 }  // namespace spv

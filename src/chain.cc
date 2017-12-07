@@ -16,22 +16,20 @@
 
 #include "./chain.h"
 
+#include <cassert>
+
+#include "./logging.h"
+
 namespace spv {
-void Chain::add_child(const BlockHeader &hdr) {
-  children_.emplace_back(new Chain(hdr, hdr_.height + 1));
-}
+MODULE_LOGGER
 
-BlockHeader Chain::tip() const {
-  BlockHeader best_hdr = hdr_;
-  for (const auto &child : children_) {
-    child->tip_helper(best_hdr);
-  }
-  return best_hdr;
-}
+void Chain::add_block(const BlockHeader &hdr) {
+  auto it = headers_.find(hdr.prev_block);
+  assert(it != headers_.end());
 
-void Chain::tip_helper(BlockHeader &hdr) const {
-  if (hdr_.height > hdr.height) {
-    hdr = hdr_;
-  }
+  BlockHeader copy(hdr);
+  copy.height = it->second.height + 1;
+  headers_.emplace(std::make_pair(copy.block_hash, copy));
+  log->debug("added block {} at height {} to chain", hdr, copy.height);
 }
 }  // namespace spv
