@@ -18,9 +18,7 @@
 
 namespace spv {
 void Chain::add_child(const BlockHeader &hdr) {
-  // this is kind of gross
-  std::unique_ptr<Chain> child(new Chain(hdr, hdr_.height + 1));
-  children_.emplace_back(std::move(child));
+  children_.emplace_back(new Chain(hdr, hdr_.height + 1));
 }
 
 BlockHeader Chain::tip() const {
