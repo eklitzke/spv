@@ -25,6 +25,7 @@
 #include "./client.h"
 #include "./config.h"
 #include "./logging.h"
+#include "./spv.pb.h"
 #include "./util.h"
 #include "./uvw.h"
 
@@ -47,6 +48,8 @@ static void shutdown(int signal) {
 }
 
 int main(int argc, char** argv) {
+  GOOGLE_PROTOBUF_VERIFY_VERSION;
+
   cxxopts::Options options("spv", "A simple SPV client.");
   options.add_options()("d,debug", "Enable debugging")(
       "c,connections", "Max connections to make",

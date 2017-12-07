@@ -19,6 +19,8 @@
 #include <algorithm>
 #include <cassert>
 
+#include "./spv.pb.h"
+
 std::ostream &operator<<(std::ostream &o, const spv::BlockHeader &hdr) {
   struct tm *tmp;
   time_t ts = static_cast<time_t>(hdr.timestamp);
@@ -28,4 +30,21 @@ std::ostream &operator<<(std::ostream &o, const spv::BlockHeader &hdr) {
   assert(strftime(out, sizeof out, "%Y-%m-%d %H:%M:%S", tmp) != 0);
 
   return o << "BlockHeader(hash=" << hdr.block_hash << " time=" << out << ")";
+}
+
+namespace spv {
+std::string BlockHeader::to_proto() const {
+  proto::BlockHeader pb_hdr;
+  pb_hdr.set_version(version);
+  pb_hdr.set_prev_block(prev_block.data(), sizeof(hash_t));
+  pb_hdr.set_prev_block(merkle_root.data(), sizeof(hash_t));
+  pb_hdr.set_timestamp(timestamp);
+  pb_hdr.set_difficulty(difficulty);
+  pb_hdr.set_nonce(nonce);
+  pb_hdr.set_height(height);
+  pb_hdr.set_block_hash(block_hash.data(), sizeof(hash_t));
+  std::string out;
+  pb_hdr.SerializeToString(&out);
+  return out;
+}
 }

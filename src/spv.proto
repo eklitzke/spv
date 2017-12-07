@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package spv;
+package spv.proto;
 
 message BlockHeader {
   uint32 version = 1;

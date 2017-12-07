@@ -17,11 +17,14 @@
 #include "./chain.h"
 
 #include <cassert>
+#include <string>
 
 #include "./logging.h"
 
 namespace spv {
 MODULE_LOGGER
+
+static const std::string db_prefix = "hdr-";
 
 void Chain::add_block(const BlockHeader &hdr) {
   auto it = headers_.find(hdr.prev_block);
@@ -39,5 +42,12 @@ void Chain::add_block(const BlockHeader &hdr) {
     tip_ = &pr.first->second;
     log->info("new chain tip at height {}: {}", copy.height, copy);
   }
+
+  std::string key =
+      db_prefix +
+      std::string(reinterpret_cast<const char *>(copy.block_hash.data()),
+                  sizeof(hash_t));
+  auto s = db_->Put(rocksdb::WriteOptions(), key, copy.to_proto());
+  assert(s.ok());
 }
 }  // namespace spv

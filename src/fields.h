@@ -94,6 +94,9 @@ struct BlockHeader {
 
   // implemented in decoders.cc
   static BlockHeader genesis();
+
+  // encode as a protobuf
+  std::string to_proto() const;
 };
 
 struct VersionNetAddr {
