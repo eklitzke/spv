@@ -21,5 +21,5 @@
 std::ostream &operator<<(std::ostream &o, const spv::BlockHeader &hdr) {
   std::string hash = spv::to_hex(hdr.block_hash);
   std::reverse(hash.begin(), hash.end());
-  return o << "Block(" << hash << ")";
+  return o << hash;
 }

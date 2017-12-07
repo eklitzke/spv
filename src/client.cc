@@ -129,7 +129,10 @@ void Client::connect_to_peer(const Addr &addr) {
 void Client::remove_connection(const Addr &addr) {
   log->warn("removing connection to {}", addr);
   auto it = connections_.find(addr);
-  assert(it != connections_.end());
+  if (it == connections_.end()) {
+    log->warn("connection {} was already removed", addr);
+    return;
+  }
   it->second->tcp_->close();
   connections_.erase(it);
 }
