@@ -57,6 +57,7 @@ class Client {
   Buffer read_buf_;
   bool shutdown_;
   Chain chain_;
+  std::shared_ptr<uvw::TimerHandle> hdr_timeout_;
 
  protected:
   Peer us_;
@@ -82,5 +83,10 @@ class Client {
 
   // enqueue connections
   void remove_connection(const Addr &addr);
+
+  // select a random connection
+  Connection *random_connection();
+
+  void update_chain_tip(Connection *conn = nullptr);
 };
 }  // namespace spv

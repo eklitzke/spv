@@ -61,6 +61,8 @@ class Connection {
 
   void send_version();
 
+  inline bool connected() const { return state_ == ConnectionState::CONNECTED; }
+
  private:
   Client* client_;
   Buffer buf_;
@@ -76,6 +78,7 @@ class Connection {
   // request headers
   void get_headers(std::vector<hash_t>& locator_hashes,
                    hash_t hash_stop = empty_hash);
+  void get_headers(const hash_t& locator);
 
  private:
   // heartbeat information

@@ -136,6 +136,12 @@ void Connection::get_headers(std::vector<hash_t>& locator_hashes,
   send_msg(req);
 }
 
+void Connection::get_headers(const hash_t& locator) {
+  log->info("fetching headers starting at block {}", locator);
+  std::vector<hash_t> needed{locator};
+  return get_headers(needed);
+}
+
 void Connection::shutdown() {
   log->warn("shutting down connection to peer {}", peer_);
   if (ping_) {

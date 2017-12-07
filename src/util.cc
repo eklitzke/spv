@@ -26,9 +26,9 @@ std::uniform_int_distribution<uint64_t> dist(
 }
 
 namespace spv {
-std::mt19937_64 g(rd());
+std::mt19937_64 rg(rd());
 
-uint64_t rand64() { return dist(g); }
+uint64_t rand64() { return dist(rg); }
 
 std::string to_hex(const char* data, size_t nbytes) {
   std::string output;

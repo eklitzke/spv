@@ -117,7 +117,11 @@ class Encoder : public Buffer {
     append(s.c_str(), s.size());
   }
 
-  void push(const hash_t &hash) { append(hash.data(), sizeof hash); }
+  // N.B. argument is passed by value
+  void push(hash_t hash) {
+    std::reverse(hash.begin(), hash.end());
+    append(hash.data(), sizeof hash);
+  }
 
   void push(const BlockHeader &hdr) {
     push(hdr.version);

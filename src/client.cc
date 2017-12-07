@@ -25,6 +25,7 @@
 namespace spv {
 MODULE_LOGGER
 
+static const std::chrono::seconds HEADER_TIMEOUT{15};
 static const std::chrono::seconds NO_REPEAT{0};
 
 // copied from chainparams.cpp
@@ -155,14 +156,52 @@ void Client::shutdown() {
 }
 
 void Client::notify_connected(Connection *conn) {
-  auto genesis = BlockHeader::genesis();
-  std::vector<hash_t> needed{genesis.block_hash};
-  conn->get_headers(needed);
+  if (!hdr_timeout_ && chain_.tip()->height == 0) {
+    log->info("starting header download");
+    update_chain_tip(conn);
+  }
+}
+
+void Client::update_chain_tip(Connection *conn) {
+  if (conn == nullptr) {
+    conn = random_connection();
+    assert(conn != nullptr);
+  }
+  hdr_timeout_ = loop_.resource<uvw::TimerHandle>();
+  hdr_timeout_->once<uvw::ErrorEvent>([](const auto &, auto &timer) {
+    log->error("got error from ping timer");
+    timer.close();
+  });
+  hdr_timeout_->on<uvw::TimerEvent>([this](const auto &, auto &timer) {
+    log->error("get headers timeout");
+    timer.close();
+    update_chain_tip();
+  });
+  hdr_timeout_->start(HEADER_TIMEOUT, NO_REPEAT);
+  conn->get_headers(chain_.tip()->block_hash);
 }
 
 void Client::notify_headers(const std::vector<BlockHeader> &block_headers) {
+  hdr_timeout_->stop();
+  hdr_timeout_->close();
+  hdr_timeout_.reset();
   for (const auto &hdr : block_headers) {
     chain_.add_block(hdr);
   }
+  update_chain_tip();
+}
+
+Connection *Client::random_connection() {
+  std::vector<Connection *> conns;
+  for (auto &c : connections_) {
+    if (c.second->connected()) {
+      conns.push_back(c.second.get());
+    }
+  }
+  if (conns.empty()) {
+    log->warn("no connected peers, return nullptr from random_connection()");
+    return nullptr;
+  }
+  return *random_choice(conns.begin(), conns.end());
 }
 }  // namespace spv

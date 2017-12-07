@@ -26,13 +26,16 @@ MODULE_LOGGER
 void Chain::add_block(const BlockHeader &hdr) {
   auto it = headers_.find(hdr.prev_block);
   assert(it != headers_.end());
+  if (headers_.find(hdr.block_hash) != headers_.end()) {
+    log->warn("attempt to add duplicate block header {}", hdr);
+    return;
+  }
 
   BlockHeader copy(hdr);
   copy.height = it->second.height + 1;
   auto pr = headers_.emplace(std::make_pair(copy.block_hash, copy));
   log->debug("added block {} at height {} to chain", hdr, copy.height);
-
-  if (pr.second && copy.height > tip_->height) {
+  if (copy.height > tip_->height) {
     tip_ = &pr.first->second;
     log->info("new chain tip at height {}: {}", copy.height, copy);
   }

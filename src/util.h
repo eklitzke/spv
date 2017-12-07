@@ -38,7 +38,7 @@ inline void hex_encode(T byte, std::string& output) {
 namespace spv {
 typedef std::chrono::time_point<std::chrono::system_clock> time_point;
 
-extern std::mt19937_64 g;
+extern std::mt19937_64 rg;
 
 inline time_point now() { return std::chrono::system_clock::now(); }
 
@@ -71,6 +71,13 @@ inline uint64_t time64() {
 
 template <typename T>
 void shuffle(T& iterable) {
-  std::shuffle(iterable.begin(), iterable.end(), g);
+  std::shuffle(iterable.begin(), iterable.end(), rg);
+}
+
+template <typename Iter>
+Iter random_choice(Iter start, Iter end) {
+  std::uniform_int_distribution<> dis(0, std::distance(start, end) - 1);
+  std::advance(start, dis(rg));
+  return start;
 }
 }  // namespace spv
