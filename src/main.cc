@@ -32,9 +32,12 @@ static std::unique_ptr<spv::Client> client;
 
 namespace {
 DECLARE_LOGGER(main_log)
+bool did_shutdown = false;
 }
 
 static void shutdown(int signal) {
+  if (did_shutdown) return;
+  did_shutdown = true;
   client->shutdown();
   auto loop = uvw::Loop::getDefault();
   loop->walk([](uvw::BaseHandle& h) {
