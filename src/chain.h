@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <cassert>
 #include <unordered_map>
 
 #include "./fields.h"
@@ -31,16 +32,18 @@ class Chain {
 
   void add_block(const BlockHeader &hdr);
 
-  const BlockHeader &tip() const { return tip_; }
+  const BlockHeader *tip() const { return tip_; }
 
  private:
   std::unordered_map<hash_t, BlockHeader> headers_;
-  BlockHeader tip_;
+  BlockHeader *tip_;
 
  protected:
   Chain() {
     auto genesis = BlockHeader::genesis();
-    headers_.emplace(genesis.block_hash, genesis);
+    auto pr = headers_.emplace(genesis.block_hash, genesis);
+    assert(pr.second);
+    tip_ = &pr.first->second;
   }
 };
 }  // namespace spv

@@ -29,7 +29,12 @@ void Chain::add_block(const BlockHeader &hdr) {
 
   BlockHeader copy(hdr);
   copy.height = it->second.height + 1;
-  headers_.emplace(std::make_pair(copy.block_hash, copy));
+  auto pr = headers_.emplace(std::make_pair(copy.block_hash, copy));
   log->debug("added block {} at height {} to chain", hdr, copy.height);
+
+  if (pr.second && copy.height > tip_->height) {
+    tip_ = &pr.first->second;
+    log->info("new chain tip at height {}: {}", copy.height, copy);
+  }
 }
 }  // namespace spv
