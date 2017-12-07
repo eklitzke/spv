@@ -39,6 +39,7 @@ Build dependencies:
  * automake
  * pkg-config
  * [libuv](https://github.com/libuv/libuv) (version 1.x)
+ * [librocksdb](http://rocksdb.org/)
 
 Other dependencies/third party libs; these are all included as git subtrees:
 

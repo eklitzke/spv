@@ -17,7 +17,10 @@
 #pragma once
 
 #include <cassert>
+#include <memory>
 #include <unordered_map>
+
+#include <rocksdb/db.h>
 
 #include "./fields.h"
 
@@ -35,6 +38,7 @@ class Chain {
   const BlockHeader *tip() const { return tip_; }
 
  private:
+  std::unique_ptr<rocksdb::DB> db_;
   std::unordered_map<hash_t, BlockHeader> headers_;
   BlockHeader *tip_;
 
@@ -44,6 +48,12 @@ class Chain {
     auto pr = headers_.emplace(genesis.block_hash, genesis);
     assert(pr.second);
     tip_ = &pr.first->second;
+    rocksdb::Options options;
+    options.create_if_missing = true;
+    rocksdb::DB *db;
+    auto status = rocksdb::DB::Open(options, "headers.db", &db);
+    assert(status.ok());
+    db_.reset(db);
   }
 };
 }  // namespace spv

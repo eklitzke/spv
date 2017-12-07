@@ -1,3 +1,4 @@
+*.db
 Makefile
 build-ax
 src/spv
