@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package spv;
+
+message BlockHeader {
+  uint32 version = 1;
+  bytes prev_block = 2;
+  bytes merkle_root = 3;
+  uint32 timestamp = 4;
+  uint32 difficulty = 5;
+  fixed32 nonce = 6;
+  uint32 height = 7;
+  bytes block_hash = 8;
+}

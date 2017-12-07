@@ -210,9 +210,9 @@ struct Decoder {
     hdr.block_hash = pow_hash(data_ + start, off_ - start, true);
 
     if (pull_tx) {
-      uint64_t txn_count;
-      pull_varint(txn_count);
-      assert(txn_count == 0);
+      uint8_t tx_count;
+      pull(tx_count);
+      assert(tx_count == 0);
     }
   }
 };

@@ -57,6 +57,17 @@ AS_COMPILER_FLAG([-fdiagnostics-color=auto],
                  [CXXFLAGS+=" -fdiagnostics-color=auto"])
 
 PKG_CHECK_MODULES([libuv], [libuv >= 1])
+AC_SUBST(libuv_LIBS)
+AC_SUBST(libuv_CFLAGS)
+
+PKG_CHECK_MODULES(protobuf, protobuf >= 3.0.0)
+AC_SUBST(protobuf_LIBS)
+AC_SUBST(protobuf_CFLAGS)
+AC_SUBST(protobuf_VERSION)
+
+AC_CHECK_PROG([PROTOC], [protoc], [protoc])
+AS_IF([test "x${PROTOC}" == "x"],
+    [AC_MSG_ERROR([ProtoBuf compiler "protoc" not found.])])
 
 AC_CHECK_LIB([rocksdb], [rocksdb_open],
              [], [AC_MSG_ERROR([failed to find librocksdb])])

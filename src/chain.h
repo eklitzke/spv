@@ -51,7 +51,7 @@ class Chain {
     rocksdb::Options options;
     options.create_if_missing = true;
     rocksdb::DB *db;
-    auto status = rocksdb::DB::Open(options, "headers.db", &db);
+    auto status = rocksdb::DB::Open(options, ".spv-headers", &db);
     assert(status.ok());
     db_.reset(db);
   }

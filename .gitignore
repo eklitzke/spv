@@ -1,4 +1,6 @@
-*.db
 Makefile
+\.spv-headers/
 build-ax
 src/spv
+*.pb.h
+*.pb.cc

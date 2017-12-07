@@ -68,7 +68,6 @@ struct BlockHeader {
   uint32_t timestamp;
   uint32_t difficulty;
   uint32_t nonce;
-  uint8_t tx_count;  // should always be zero
 
   // not encoded, for internal use only
   size_t height;
@@ -81,7 +80,6 @@ struct BlockHeader {
         timestamp(0),
         difficulty(0),
         nonce(0),
-        tx_count(0),
         height(0),
         block_hash(empty_hash) {}
   BlockHeader(const BlockHeader &other)
@@ -91,7 +89,6 @@ struct BlockHeader {
         timestamp(other.timestamp),
         difficulty(other.difficulty),
         nonce(other.nonce),
-        tx_count(other.tx_count),
         height(other.height),
         block_hash(other.block_hash) {}
 
