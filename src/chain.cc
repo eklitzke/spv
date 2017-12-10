@@ -19,6 +19,7 @@
 #include <cassert>
 #include <string>
 
+#include "./encoder.h"
 #include "./logging.h"
 
 namespace spv {
@@ -47,7 +48,7 @@ void Chain::add_block(const BlockHeader &hdr) {
       db_prefix +
       std::string(reinterpret_cast<const char *>(copy.block_hash.data()),
                   sizeof(hash_t));
-  auto s = db_->Put(rocksdb::WriteOptions(), key, copy.to_proto());
+  auto s = db_->Put(rocksdb::WriteOptions(), key, db_encode(copy));
   assert(s.ok());
 }
 }  // namespace spv

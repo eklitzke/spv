@@ -14,18 +14,17 @@
 // You should have received a copy of the GNU General Public License along with
 // SPV. If not, see <http://www.gnu.org/licenses/>.
 
-#include "./fields.h"
+#include "./encoder.h"
 
-#include <algorithm>
-#include <cassert>
+namespace spv {
+std::string db_encode(const BlockHeader &hdr) {
+  Encoder enc;
+  enc.push(hdr, false);
+  enc.push(hdr.height);
+  enc.push(hdr.block_hash);
 
-std::ostream &operator<<(std::ostream &o, const spv::BlockHeader &hdr) {
-  struct tm *tmp;
-  time_t ts = static_cast<time_t>(hdr.timestamp);
-  tmp = localtime(&ts);
-  assert(tmp != nullptr);
-  char out[200];
-  assert(strftime(out, sizeof out, "%Y-%m-%d %H:%M:%S", tmp) != 0);
-
-  return o << "BlockHeader(hash=" << hdr.block_hash << " time=" << out << ")";
+  size_t sz;
+  std::unique_ptr<char[]> data = enc.serialize(sz, false);
+  return {data.get(), sz};
+}
 }

@@ -96,7 +96,7 @@ struct BlockHeader {
   static BlockHeader genesis();
 
   // encode as a protobuf
-  std::string to_proto() const;
+  std::string serialize() const;
 };
 
 struct VersionNetAddr {

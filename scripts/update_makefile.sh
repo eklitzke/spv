@@ -9,9 +9,6 @@ SOURCES=()
 for f in $(git ls-files -- '*.cc' '*.h'); do
   SOURCES+=("$f")
 done
-for proto in $(git ls-files -- '*.proto' | sed 's/\.proto$//'); do
-  SOURCES+=("$proto.pb.cc" "$proto.pb.h")
-done
 
 IFS=$'\n' SORTED=($(sort <<<"${SOURCES[*]}"))
 unset IFS
