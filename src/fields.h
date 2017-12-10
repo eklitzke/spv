@@ -99,9 +99,6 @@ struct BlockHeader {
 
   // encode to db format
   std::string db_encode() const;
-
-  // get the block hash as a string
-  std::string hash_str() const;
 };
 
 struct VersionNetAddr {

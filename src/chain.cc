@@ -28,23 +28,21 @@ MODULE_LOGGER
 static const rocksdb::ReadOptions read_opts;
 static const rocksdb::WriteOptions write_opts;
 
-static const std::string tip_key = "tip-hash";
+static const std::string tip_key = "tip";
 
 inline std::string encode_key(const hash_t &block_hash) {
-  return "hdr-" + std::string(reinterpret_cast<const char *>(block_hash.data()),
-                              sizeof(hash_t));
+  return "h" + std::string(reinterpret_cast<const char *>(block_hash.data()),
+                           sizeof(hash_t));
 }
 
-Chain::Chain() : tip_height_(0), tip_hash_(empty_hash) {
+Chain::Chain() {
   rocksdb::Options options;
   rocksdb::DB *db;
   auto status = rocksdb::DB::Open(options, ".spv", &db);
   if (status.ok()) {
     db_.reset(db);
-    BlockHeader hdr = find_tip();
-    tip_height_ = hdr.height;
-    tip_hash_ = hdr.block_hash;
-    log->info("initialized with chain height {}", tip_height_);
+    tip_ = find_tip();
+    log->info("initialized with at {}", tip_);
     return;
   }
 
@@ -56,13 +54,8 @@ Chain::Chain() : tip_height_(0), tip_hash_(empty_hash) {
 }
 
 void Chain::update_database(const BlockHeader &hdr) {
-  if (!tip_height_ || hdr.height > tip_height_) {
-    tip_height_ = hdr.height;
-    tip_hash_ = hdr.block_hash;
-
-    // XXX: this is kind of ghetto
-    auto s = db_->Put(write_opts, tip_key, hdr.hash_str());
-    assert(s.ok());
+  if (!tip_.height || hdr.height > tip_.height) {
+    tip_ = hdr;
   }
 
   const std::string key = encode_key(hdr.block_hash);
@@ -90,13 +83,8 @@ BlockHeader Chain::find_tip() {
   auto s = db_->Get(read_opts, tip_key, &val);
   assert(s.ok());
 
-  hash_t tip_hash;
-  assert(sizeof(hash_t) == val.size());
-  std::memmove(tip_hash.data(), val.data(), sizeof(hash_t));
-
   BlockHeader hdr;
-  s = find_block_header(tip_hash, hdr);
-  assert(s.ok());
+  hdr.db_decode(val);
   return hdr;
 }
 
@@ -120,5 +108,10 @@ void Chain::put_block_header(const BlockHeader &hdr, bool check_duplicate) {
   BlockHeader copy(hdr);
   copy.height = prev_block.height + 1;
   update_database(copy);
+}
+
+void Chain::save_tip() {
+  auto s = db_->Put(write_opts, tip_key, tip_.db_encode());
+  assert(s.ok());
 }
 }  // namespace spv

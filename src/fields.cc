@@ -27,10 +27,14 @@ std::ostream &operator<<(std::ostream &o, const spv::BlockHeader &hdr) {
   time_t ts = static_cast<time_t>(hdr.timestamp);
   tmp = localtime(&ts);
   assert(tmp != nullptr);
-  char out[200];
-  assert(strftime(out, sizeof out, "%Y-%m-%d %H:%M:%S", tmp) != 0);
+  char time_buf[200];
+  assert(strftime(time_buf, sizeof time_buf, "%Y-%m-%d %H:%M:%S", tmp) != 0);
 
-  return o << "BlockHeader(hash=" << hdr.block_hash << " time=" << out << ")";
+  o << "BlockHeader(hash=" << hdr.block_hash << " time=" << time_buf;
+  if (hdr.height) {
+    o << " height=" << hdr.height;
+  }
+  return o << ")";
 }
 
 namespace spv {
@@ -64,9 +68,5 @@ void BlockHeader::db_decode(const std::string &s) {
   dec.pull(height);
   dec.pull(block_hash);
   assert(!dec.bytes_remaining());
-}
-
-std::string BlockHeader::hash_str() const {
-  return {reinterpret_cast<const char *>(block_hash.data()), sizeof(hash_t)};
 }
 }

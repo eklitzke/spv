@@ -29,16 +29,22 @@ class Chain {
 
  public:
   Chain(const Chain &other) = delete;
+  ~Chain() {
+    save_tip();
+    db_.reset();
+  }
 
+  // add a block header
   void put_block_header(const BlockHeader &hdr, bool check_duplicate = true);
 
-  inline size_t tip_height() const { return tip_height_; }
-  inline const hash_t &tip_hash() const { return tip_hash_; }
+  // save the tip
+  void save_tip();
+
+  inline const BlockHeader &tip() const { return tip_; }
 
  private:
   std::unique_ptr<rocksdb::DB> db_;
-  size_t tip_height_;
-  hash_t tip_hash_;
+  BlockHeader tip_;
 
   void update_database(const BlockHeader &hdr);
 
