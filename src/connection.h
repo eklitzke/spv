@@ -76,9 +76,9 @@ class Connection {
   void shutdown();
 
   // request headers
-  void get_headers(std::vector<hash_t>& locator_hashes,
-                   hash_t hash_stop = empty_hash);
-  void get_headers(const hash_t& locator);
+  void get_headers(const std::vector<hash_t>& locator_hashes,
+                   const hash_t& hash_stop = empty_hash);
+  void get_headers(const BlockHeader& start_hdr);
 
  private:
   // heartbeat information

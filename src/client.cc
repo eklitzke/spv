@@ -178,7 +178,7 @@ void Client::update_chain_tip(Connection *conn) {
     update_chain_tip();
   });
   hdr_timeout_->start(HEADER_TIMEOUT, NO_REPEAT);
-  conn->get_headers(chain_.tip().block_hash);
+  conn->get_headers(chain_.tip());
 }
 
 void Client::notify_headers(const std::vector<BlockHeader> &block_headers) {

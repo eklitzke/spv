@@ -68,7 +68,7 @@ bool Connection::read_message() {
   // TODO: use a hash table for this, like in the decoder
   if (msg.get() != nullptr) {
     const std::string& cmd = msg->headers.command;
-    log->info("message '{}' from peer {}", cmd, peer_);
+    log->debug("message '{}' from peer {}", cmd, peer_);
 
     if (cmd != "version" && cmd != "verack") {
       assert(state_ == ConnectionState::CONNECTED);
@@ -111,9 +111,7 @@ void Connection::send_msg(const Message& msg) {
   size_t sz;
   std::unique_ptr<char[]> data = msg.encode(sz);
   const std::string& cmd = msg.headers.command;
-  log->info("sending '{}' to {}", cmd, peer_);
-  log->debug("message '{}' to {} will have wire size of {} bytes", cmd, peer_,
-             sz);
+  log->debug("sending '{}' to {}", cmd, peer_);
   tcp_->write(std::move(data), sz);
 }
 
@@ -127,8 +125,8 @@ void Connection::send_version() {
   send_msg(ver);
 }
 
-void Connection::get_headers(std::vector<hash_t>& locator_hashes,
-                             hash_t hash_stop) {
+void Connection::get_headers(const std::vector<hash_t>& locator_hashes,
+                             const hash_t& hash_stop) {
   GetHeaders req;
   req.version = client_->us_.version;
   req.locator_hashes = locator_hashes;
@@ -136,9 +134,9 @@ void Connection::get_headers(std::vector<hash_t>& locator_hashes,
   send_msg(req);
 }
 
-void Connection::get_headers(const hash_t& locator) {
-  log->info("fetching headers starting at block {}", locator);
-  std::vector<hash_t> needed{locator};
+void Connection::get_headers(const BlockHeader& start_hdr) {
+  log->info("fetching headers starting at block {}", start_hdr);
+  std::vector<hash_t> needed{start_hdr.block_hash};
   return get_headers(needed);
 }
 
@@ -178,7 +176,8 @@ void Connection::handle_getheaders(GetHeaders* headers) {
 }
 
 void Connection::handle_headers(HeadersMsg* msg) {
-  log->info("headers message with {} block headers", msg->block_headers.size());
+  log->debug("headers message with {} block headers",
+             msg->block_headers.size());
   client_->notify_headers(msg->block_headers);
 }
 
