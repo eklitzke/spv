@@ -34,11 +34,13 @@ static const std::vector<std::string> testSeeds = {
     "testnet-seed.bluematt.me",
 };
 
-Client::Client(uvw::Loop &loop, size_t max_connections)
+Client::Client(const std::string &datadir, std::shared_ptr<uvw::Loop> loop,
+               size_t max_connections)
     : max_connections_(max_connections),
       shutdown_(false),
       us_(rand64(), 0, PROTOCOL_VERSION, USER_AGENT),
-      loop_(loop) {}
+      loop_(loop),
+      chain_(datadir) {}
 
 void Client::run() {
   log->debug("connecting to network as {}", us_.user_agent);
@@ -48,7 +50,7 @@ void Client::run() {
 }
 
 void Client::lookup_seed(const std::string &seed) {
-  auto request = loop_.resource<uvw::GetAddrInfoReq>();
+  auto request = loop_->resource<uvw::GetAddrInfoReq>();
   request->on<uvw::ErrorEvent>(
       [](const auto &, auto &) { log->error("dns resolution failed"); });
   request->on<uvw::AddrInfoEvent>([=](const auto &event, auto &) {
@@ -86,7 +88,7 @@ void Client::connect_to_peer(const Addr &addr) {
   auto pr = connections_.insert(std::make_pair(addr, conn));
   assert(pr.second);
 
-  auto timer = loop_.resource<uvw::TimerHandle>();
+  auto timer = loop_->resource<uvw::TimerHandle>();
   auto weak_timer = timer->weak_from_this();
   auto cancel_timer = [=]() {
     if (auto t = weak_timer.lock()) t->close();
@@ -167,7 +169,7 @@ void Client::update_chain_tip(Connection *conn) {
     conn = random_connection();
     assert(conn != nullptr);
   }
-  hdr_timeout_ = loop_.resource<uvw::TimerHandle>();
+  hdr_timeout_ = loop_->resource<uvw::TimerHandle>();
   hdr_timeout_->once<uvw::ErrorEvent>([](const auto &, auto &timer) {
     log->error("got error from ping timer");
     timer.close();

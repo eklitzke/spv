@@ -24,6 +24,7 @@
 
 #include "./client.h"
 #include "./config.h"
+#include "./fs.h"
 #include "./logging.h"
 #include "./util.h"
 #include "./uvw.h"
@@ -48,12 +49,17 @@ static void shutdown(int signal) {
 
 int main(int argc, char** argv) {
   cxxopts::Options options("spv", "A simple SPV client.");
-  options.add_options()("d,debug", "Enable debugging")(
-      "c,connections", "Max connections to make",
-      cxxopts::value<std::size_t>()->default_value("4"))(
-      "h,help", "Print help information")("v,version",
-                                          "Print version information");
+  auto g = options.add_options();
+  g("d,debug", "Enable debugging");
+  g("c,connections", "Max connections to make",
+    cxxopts::value<std::size_t>()->default_value("4"));
+  g("h,help", "Print help information");
+  g("v,version", "Print version information");
+  g("data-dir", "Path to the SPV database",
+    cxxopts::value<std::string>()->default_value(".spv"));
+  g("delete-data", "Delete the SPV data directory");
 
+  std::string data_dir;
   std::size_t connections;
   try {
     auto args = options.parse(argc, argv);
@@ -64,14 +70,18 @@ int main(int argc, char** argv) {
     if (args.count("debug")) {
       spdlog::set_level(spdlog::level::debug);
     }
+    if (args.count("delete-data")) {
+      spv::recursive_delete(".spv");
+    }
     connections = args["connections"].as<std::size_t>();
+    data_dir = args["data-dir"].as<std::string>();
   } catch (const cxxopts::option_not_exists_exception& exc) {
     std::cerr << exc.what() << "\n\n" << options.help();
     return 1;
   }
 
   auto loop = uvw::Loop::getDefault();
-  client.reset(new spv::Client(*loop, connections));
+  client.reset(new spv::Client(data_dir, loop, connections));
 #if 1
   // XXX: doesn't work yet
   signal(SIGINT, shutdown);

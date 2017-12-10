@@ -28,10 +28,11 @@ MODULE_LOGGER
 const static std::chrono::seconds ping_interval(60);
 
 Connection::Connection(Client* client, const Addr& addr)
-    : client_(client),
+    : loop_(client->loop_),
+      client_(client),
       peer_(addr),
       state_(ConnectionState::NEED_VERSION),
-      tcp_(client->loop_.resource<uvw::TcpHandle>()),
+      tcp_(client->loop_->resource<uvw::TcpHandle>()),
       ping_nonce_(0) {
   assert(!addr.ip().empty() && addr.port());
 }
@@ -247,7 +248,7 @@ void Connection::handle_version(Version* ver) {
   send_msg(VerAck{});
 
   // set up a ping timer; TODO: require pongs
-  ping_ = client_->loop_.resource<uvw::TimerHandle>();
+  ping_ = client_->loop_->resource<uvw::TimerHandle>();
   ping_->once<uvw::ErrorEvent>([](const auto&, auto& timer) {
     log->error("got error from ping timer");
     timer.close();
@@ -259,7 +260,7 @@ void Connection::handle_version(Version* ver) {
                ping_nonce_);
     send_msg(ping);
 
-    pong_ = client_->loop_.resource<uvw::TimerHandle>();
+    pong_ = client_->loop_->resource<uvw::TimerHandle>();
     pong_->once<uvw::ErrorEvent>([this](const auto&, auto& timer) {
       log->error("got error from pong timer");
       pong_->close();

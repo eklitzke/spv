@@ -16,43 +16,9 @@
 
 #pragma once
 
-#include <rocksdb/db.h>
-#include <memory>
-
-#include "./fields.h"
+#include <string>
 
 namespace spv {
-class Client;
-
-class Chain {
-  friend Client;
-
- public:
-  Chain() = delete;
-  Chain(const Chain &other) = delete;
-  ~Chain() {
-    save_tip();
-    db_.reset();
-  }
-
-  // add a block header
-  void put_block_header(const BlockHeader &hdr, bool check_duplicate = true);
-
-  // save the tip
-  void save_tip();
-
-  inline const BlockHeader &tip() const { return tip_; }
-
- private:
-  std::unique_ptr<rocksdb::DB> db_;
-  BlockHeader tip_;
-
-  void update_database(const BlockHeader &hdr);
-
-  rocksdb::Status find_block_header(const hash_t &block_hash, BlockHeader &hdr);
-  BlockHeader find_tip();
-
- protected:
-  Chain(const std::string &datadir);
-};
+// recursively delete a directory
+int recursive_delete(const std::string &dirname);
 }  // namespace spv

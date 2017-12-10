@@ -35,10 +35,10 @@ inline std::string encode_key(const hash_t &block_hash) {
                            sizeof(hash_t));
 }
 
-Chain::Chain() {
+Chain::Chain(const std::string &datadir) {
   rocksdb::Options options;
   rocksdb::DB *db;
-  auto status = rocksdb::DB::Open(options, ".spv", &db);
+  auto status = rocksdb::DB::Open(options, datadir, &db);
   if (status.ok()) {
     db_.reset(db);
     tip_ = find_tip();
@@ -47,7 +47,7 @@ Chain::Chain() {
   }
 
   options.create_if_missing = true;
-  status = rocksdb::DB::Open(options, ".spv", &db);
+  status = rocksdb::DB::Open(options, datadir, &db);
   assert(status.ok());
   db_.reset(db);
   update_database(BlockHeader::genesis());

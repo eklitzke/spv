@@ -41,7 +41,8 @@ class Client {
   friend Connection;
 
  public:
-  Client(uvw::Loop &loop, size_t max_connections);
+  Client(const std::string &datadir, std::shared_ptr<uvw::Loop> loop,
+         size_t max_connections);
   Client() = delete;
   Client(const Client &other) = delete;
 
@@ -61,7 +62,7 @@ class Client {
 
  protected:
   Peer us_;
-  uvw::Loop &loop_;
+  std::shared_ptr<uvw::Loop> loop_;
 
   // Connections call this method to notify the client that they've finished
   // connecting (meaning they've finished the version handshake). Then the

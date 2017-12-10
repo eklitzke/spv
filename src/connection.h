@@ -64,6 +64,7 @@ class Connection {
   inline bool connected() const { return state_ == ConnectionState::CONNECTED; }
 
  private:
+  std::shared_ptr<uvw::Loop> loop_;
   Client* client_;
   Buffer buf_;
   Peer peer_;
