@@ -29,11 +29,10 @@
 #include "./util.h"
 #include "./uvw.h"
 
-static std::unique_ptr<spv::Client> client;
-
 namespace {
 DECLARE_LOGGER(main_log)
 bool did_shutdown = false;
+std::unique_ptr<spv::Client> client;
 }
 
 static void shutdown(int signal) {
@@ -48,7 +47,7 @@ static void shutdown(int signal) {
 }
 
 int main(int argc, char** argv) {
-  cxxopts::Options options("spv", "A simple SPV client.");
+  cxxopts::Options options("spv", "A simple Bitcoin client.");
   auto g = options.add_options();
   g("d,debug", "Enable debugging");
   g("c,connections", "Max connections to make",
@@ -72,6 +71,10 @@ int main(int argc, char** argv) {
     }
     if (args.count("delete-data")) {
       spv::recursive_delete(".spv");
+    }
+    if (args.count("version")) {
+      std::cout << PACKAGE_STRING << std::endl;
+      return 0;
     }
     connections = args["connections"].as<std::size_t>();
     data_dir = args["data-dir"].as<std::string>();
