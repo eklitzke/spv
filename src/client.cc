@@ -156,7 +156,7 @@ void Client::shutdown() {
 }
 
 void Client::notify_connected(Connection *conn) {
-  if (!hdr_timeout_ && chain_.tip()->height == 0) {
+  if (!hdr_timeout_ && chain_.tip_height() == 0) {
     log->info("starting header download");
     update_chain_tip(conn);
   }
@@ -178,7 +178,7 @@ void Client::update_chain_tip(Connection *conn) {
     update_chain_tip();
   });
   hdr_timeout_->start(HEADER_TIMEOUT, NO_REPEAT);
-  conn->get_headers(chain_.tip()->block_hash);
+  conn->get_headers(chain_.tip_hash());
 }
 
 void Client::notify_headers(const std::vector<BlockHeader> &block_headers) {
@@ -186,7 +186,7 @@ void Client::notify_headers(const std::vector<BlockHeader> &block_headers) {
   hdr_timeout_->close();
   hdr_timeout_.reset();
   for (const auto &hdr : block_headers) {
-    chain_.add_block(hdr);
+    chain_.put_block_header(hdr);
   }
   update_chain_tip();
 }

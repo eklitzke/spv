@@ -1,5 +1,5 @@
 Makefile
-\.spv-headers/
+\.spv/
 build-ax
 src/spv
 *.pb.h

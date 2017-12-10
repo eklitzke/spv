@@ -16,11 +16,8 @@
 
 #pragma once
 
-#include <cassert>
-#include <memory>
-#include <unordered_map>
-
 #include <rocksdb/db.h>
+#include <memory>
 
 #include "./fields.h"
 
@@ -33,27 +30,22 @@ class Chain {
  public:
   Chain(const Chain &other) = delete;
 
-  void add_block(const BlockHeader &hdr);
+  void put_block_header(const BlockHeader &hdr, bool check_duplicate = true);
 
-  const BlockHeader *tip() const { return tip_; }
+  inline size_t tip_height() const { return tip_height_; }
+  inline const hash_t &tip_hash() const { return tip_hash_; }
 
  private:
   std::unique_ptr<rocksdb::DB> db_;
-  std::unordered_map<hash_t, BlockHeader> headers_;
-  BlockHeader *tip_;
+  size_t tip_height_;
+  hash_t tip_hash_;
+
+  void update_database(const BlockHeader &hdr);
+
+  rocksdb::Status find_block_header(const hash_t &block_hash, BlockHeader &hdr);
+  BlockHeader find_tip();
 
  protected:
-  Chain() {
-    auto genesis = BlockHeader::genesis();
-    auto pr = headers_.emplace(genesis.block_hash, genesis);
-    assert(pr.second);
-    tip_ = &pr.first->second;
-    rocksdb::Options options;
-    options.create_if_missing = true;
-    rocksdb::DB *db;
-    auto status = rocksdb::DB::Open(options, ".spv-headers", &db);
-    assert(status.ok());
-    db_.reset(db);
-  }
+  Chain();
 };
 }  // namespace spv

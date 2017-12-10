@@ -23,8 +23,6 @@
 #include <memory>
 
 namespace spv {
-std::string db_encode(const BlockHeader &hdr);
-
 class Encoder : public Buffer {
  public:
   Encoder() : Buffer() {}

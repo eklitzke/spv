@@ -92,11 +92,16 @@ struct BlockHeader {
         height(other.height),
         block_hash(other.block_hash) {}
 
-  // implemented in decoders.cc
   static BlockHeader genesis();
 
-  // encode as a protobuf
-  std::string serialize() const;
+  // decode from db
+  void db_decode(const std::string &s);
+
+  // encode to db format
+  std::string db_encode() const;
+
+  // get the block hash as a string
+  std::string hash_str() const;
 };
 
 struct VersionNetAddr {

@@ -19,6 +19,9 @@
 #include <algorithm>
 #include <cassert>
 
+#include "./decoder.h"
+#include "./encoder.h"
+
 std::ostream &operator<<(std::ostream &o, const spv::BlockHeader &hdr) {
   struct tm *tmp;
   time_t ts = static_cast<time_t>(hdr.timestamp);
@@ -28,4 +31,42 @@ std::ostream &operator<<(std::ostream &o, const spv::BlockHeader &hdr) {
   assert(strftime(out, sizeof out, "%Y-%m-%d %H:%M:%S", tmp) != 0);
 
   return o << "BlockHeader(hash=" << hdr.block_hash << " time=" << out << ")";
+}
+
+namespace spv {
+std::string BlockHeader::db_encode() const {
+  Encoder enc;
+  enc.push(*this, false);
+  enc.push(this->height);
+  enc.push(this->block_hash);
+
+  size_t sz;
+  std::unique_ptr<char[]> data = enc.serialize(sz, false);
+  return {data.get(), sz};
+}
+
+BlockHeader BlockHeader::genesis() {
+  BlockHeader hdr;
+  Decoder dec(reinterpret_cast<const char *>(genesis_block_hdr.data()),
+              genesis_block_hdr.size());
+  dec.pull(hdr, false);
+  const hash_t genesis_hash{0x00, 0x00, 0x00, 0x00, 0x09, 0x33, 0xea, 0x01,
+                            0xad, 0x0e, 0xe9, 0x84, 0x20, 0x97, 0x79, 0xba,
+                            0xae, 0xc3, 0xce, 0xd9, 0x0f, 0xa3, 0xf4, 0x08,
+                            0x71, 0x95, 0x26, 0xf8, 0xd7, 0x7f, 0x49, 0x43};
+  assert(hdr.block_hash == genesis_hash);
+  return hdr;
+}
+
+void BlockHeader::db_decode(const std::string &s) {
+  Decoder dec(s.c_str(), s.size());
+  dec.pull(*this, false);
+  dec.pull(height);
+  dec.pull(block_hash);
+  assert(!dec.bytes_remaining());
+}
+
+std::string BlockHeader::hash_str() const {
+  return {reinterpret_cast<const char *>(block_hash.data()), sizeof(hash_t)};
+}
 }
