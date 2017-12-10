@@ -42,7 +42,6 @@ std::string BlockHeader::db_encode() const {
   Encoder enc;
   enc.push(*this, false);
   enc.push(this->height);
-  enc.push(this->block_hash);
 
   size_t sz;
   std::unique_ptr<char[]> data = enc.serialize(sz, false);
@@ -66,7 +65,6 @@ void BlockHeader::db_decode(const std::string &s) {
   Decoder dec(s.c_str(), s.size());
   dec.pull(*this, false);
   dec.pull(height);
-  dec.pull(block_hash);
   assert(!dec.bytes_remaining());
 }
 }

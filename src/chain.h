@@ -49,7 +49,7 @@ class Chain {
 
   void update_database(const BlockHeader &hdr);
 
-  rocksdb::Status find_block_header(const hash_t &block_hash, BlockHeader &hdr);
+  rocksdb::Status find_block_header(BlockHeader &hdr);
   BlockHeader find_tip();
 
  protected:

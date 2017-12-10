@@ -30,9 +30,9 @@ static const rocksdb::WriteOptions write_opts;
 
 static const std::string tip_key = "tip";
 
-inline std::string encode_key(const hash_t &block_hash) {
-  return "h" + std::string(reinterpret_cast<const char *>(block_hash.data()),
-                           sizeof(hash_t));
+inline std::string encode_key(hash_t block_hash) {
+  std::reverse(block_hash.begin(), block_hash.end());  // n.b. by value
+  return {reinterpret_cast<const char *>(block_hash.data()), sizeof(hash_t)};
 }
 
 Chain::Chain(const std::string &datadir) {
@@ -67,9 +67,8 @@ void Chain::update_database(const BlockHeader &hdr) {
   assert(s.ok());
 }
 
-rocksdb::Status Chain::find_block_header(const hash_t &block_hash,
-                                         BlockHeader &hdr) {
-  const std::string key = encode_key(block_hash);
+rocksdb::Status Chain::find_block_header(BlockHeader &hdr) {
+  const std::string key = encode_key(hdr.block_hash);
   std::string val;
   auto s = db_->Get(read_opts, key, &val);
   if (!s.ok()) {
@@ -104,7 +103,8 @@ void Chain::put_block_header(const BlockHeader &hdr, bool check_duplicate) {
   }
 
   BlockHeader prev_block;
-  auto s = find_block_header(hdr.prev_block, prev_block);
+  prev_block.block_hash = hdr.prev_block;
+  auto s = find_block_header(prev_block);
   assert(s.ok());
 
   BlockHeader copy(hdr);
