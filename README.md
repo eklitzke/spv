@@ -16,7 +16,8 @@ the network, the client is currently hard-coded to connect to testnet.
 
 Currently the client can connect to the peers via the DNS seed list, and
 initiate header sync, downloading the full set of block headers starting from
-the genesis block.
+the genesis block. The block headers themselves are stored in a RocksDB
+database, in a directory named `.spv`.
 
 ## Compiling
 

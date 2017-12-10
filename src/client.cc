@@ -156,7 +156,7 @@ void Client::shutdown() {
 }
 
 void Client::notify_connected(Connection *conn) {
-  if (!hdr_timeout_ && chain_.tip_height() == 0) {
+  if (!hdr_timeout_) {
     log->info("starting header download");
     update_chain_tip(conn);
   }
