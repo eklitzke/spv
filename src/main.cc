@@ -31,19 +31,31 @@
 
 namespace {
 DECLARE_LOGGER(main_log)
-bool did_shutdown = false;
 std::unique_ptr<spv::Client> client;
 }
 
-static void shutdown(int signal) {
-  if (did_shutdown) return;
-  did_shutdown = true;
+static void shutdown(void) {
   client->shutdown();
   auto loop = uvw::Loop::getDefault();
   loop->walk([](uvw::BaseHandle& h) {
-    main_log->warn("closing loop handle");
+    if (h.closing()) {
+      main_log->debug("loop handle {} already closing", (void*)&h);
+    } else {
+      main_log->info("closing pending handle {}", (void*)&h);
+      h.close();
+    }
+  });
+}
+
+static void install_shutdown(int signum) {
+  auto loop = uvw::Loop::getDefault();
+  auto handle = loop->resource<uvw::SignalHandle>();
+  handle->on<uvw::SignalEvent>([=](const auto&, auto& h) {
+    main_log->info("received signal {}", signum);
+    shutdown();
     h.close();
   });
+  handle->start(signum);
 }
 
 int main(int argc, char** argv) {
@@ -85,11 +97,8 @@ int main(int argc, char** argv) {
 
   auto loop = uvw::Loop::getDefault();
   client.reset(new spv::Client(data_dir, loop, connections));
-#if 1
-  // XXX: doesn't work yet
-  signal(SIGINT, shutdown);
-  signal(SIGTERM, shutdown);
-#endif
+  install_shutdown(SIGINT);
+  install_shutdown(SIGTERM);
   client->run();
 
   loop->run();

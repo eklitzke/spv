@@ -25,13 +25,13 @@
 namespace spv {
 MODULE_LOGGER
 
-static const std::chrono::seconds HEADER_TIMEOUT{15};
+static const std::chrono::seconds HEADER_TIMEOUT{19};
 static const std::chrono::seconds NO_REPEAT{0};
 
 // copied from chainparams.cpp
 static const std::vector<std::string> testSeeds = {
-    "testnet-seed.bitcoin.jonasschnelli.ch", "seed.tbtc.petertodd.org",
-    "testnet-seed.bluematt.me",
+    //"testnet-seed.bitcoin.jonasschnelli.ch",
+    "seed.tbtc.petertodd.org", "testnet-seed.bluematt.me",
 };
 
 Client::Client(const std::string &datadir, std::shared_ptr<uvw::Loop> loop,
@@ -51,17 +51,20 @@ void Client::run() {
 
 void Client::lookup_seed(const std::string &seed) {
   auto request = loop_->resource<uvw::GetAddrInfoReq>();
-  request->on<uvw::ErrorEvent>(
-      [](const auto &, auto &) { log->error("dns resolution failed"); });
-  request->on<uvw::AddrInfoEvent>([=](const auto &event, auto &) {
+  request->on<uvw::ErrorEvent>([=](const auto &, auto &req) {
+    log->error("async dns resolution to {} failed", seed);
+  });
+  request->on<uvw::AddrInfoEvent>([=](const auto &event, auto &req) {
     for (const addrinfo *p = event.data.get(); p != nullptr; p = p->ai_next) {
       Addr addr(p);
       seed_peers_.insert(addr);
       log->debug("added new peer {} (via seed {})", addr, seed);
     }
     connect_to_peers();
+    remove_dns_request(&req);
   });
   request->nodeAddrInfo(seed);
+  dns_requests_.push_back(request);
 }
 
 void Client::connect_to_peers() {
@@ -107,8 +110,8 @@ void Client::connect_to_peer(const Addr &addr) {
   conn->tcp_->on<uvw::DataEvent>([=](const auto &data, auto &) {
     conn->read(data.data.get(), data.length);
   });
-  conn->tcp_->once<uvw::CloseEvent>([=](const auto &, auto &) {
-    log->warn("closed connection {}", addr);
+  conn->tcp_->once<uvw::CloseEvent>([=](const auto &, auto &tcp) {
+    log->info("close event for connection {}", addr);
     cancel_timer();
     connect_to_peers();
   });
@@ -122,7 +125,6 @@ void Client::connect_to_peer(const Addr &addr) {
     log->info("remote peer {} closed connection", addr);
     remove_connection(addr);
   });
-
   conn->connect();
 
   timer->once<uvw::ErrorEvent>(
@@ -148,12 +150,14 @@ void Client::remove_connection(const Addr &addr) {
 
 void Client::shutdown() {
   if (!shutdown_) {
-    log->warn("shutting down client");
+    log->info("shutting down client");
     shutdown_ = true;
 
     for (auto &pr : connections_) {
       pr.second->shutdown();
     }
+    cancel_hdr_timeout();
+    cancel_dns_requests();
   }
 }
 
@@ -169,9 +173,10 @@ void Client::update_chain_tip(Connection *conn) {
     conn = random_connection();
     assert(conn != nullptr);
   }
+  assert(!hdr_timeout_);
   hdr_timeout_ = loop_->resource<uvw::TimerHandle>();
   hdr_timeout_->once<uvw::ErrorEvent>([](const auto &, auto &timer) {
-    log->error("got error from ping timer");
+    log->error("got error from header timer");
     timer.close();
   });
   hdr_timeout_->on<uvw::TimerEvent>([this](const auto &, auto &timer) {
@@ -184,9 +189,7 @@ void Client::update_chain_tip(Connection *conn) {
 }
 
 void Client::notify_headers(const std::vector<BlockHeader> &block_headers) {
-  hdr_timeout_->stop();
-  hdr_timeout_->close();
-  hdr_timeout_.reset();
+  cancel_hdr_timeout();
   for (const auto &hdr : block_headers) {
     chain_.put_block_header(hdr);
   }
@@ -206,5 +209,32 @@ Connection *Client::random_connection() {
     return nullptr;
   }
   return *random_choice(conns.begin(), conns.end());
+}
+
+void Client::cancel_hdr_timeout() {
+  if (hdr_timeout_) {
+    hdr_timeout_->stop();
+    hdr_timeout_->close();
+    hdr_timeout_.reset();
+  }
+}
+
+void Client::cancel_dns_requests() {
+  for (auto &sp : dns_requests_) {
+    sp->cancel();
+  }
+  dns_requests_.clear();
+}
+
+void Client::remove_dns_request(uvw::GetAddrInfoReq *req) {
+  auto p = std::find_if(dns_requests_.begin(), dns_requests_.end(),
+                        [=](const auto &p) { return p.get() == req; });
+  if (p == dns_requests_.end()) {
+    log->warn("cannot cancel dns request {}, it is not in request list",
+              (void *)req);
+    return;
+  }
+  (*p)->cancel();
+  dns_requests_.erase(p);
 }
 }  // namespace spv

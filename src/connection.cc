@@ -142,20 +142,26 @@ void Connection::get_headers(const BlockHeader& start_hdr) {
 }
 
 void Connection::shutdown() {
-  log->warn("shutting down connection to peer {}", peer_);
+  bool did_shutdown = false;
   if (ping_) {
     ping_->stop();
     ping_->close();
     ping_.reset();
+    did_shutdown = true;
   }
   if (pong_) {
     pong_->stop();
     pong_->close();
     pong_.reset();
+    did_shutdown = true;
   }
   if (tcp_) {
     tcp_->close();
     tcp_.reset();
+    did_shutdown = true;
+  }
+  if (did_shutdown) {
+    log->debug("shutdown connection to peer {}", peer_);
   }
 }
 
