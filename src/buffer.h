@@ -26,7 +26,7 @@ namespace spv {
 // Buffer represents a byte buffer.
 class Buffer {
  public:
-  Buffer() : Buffer(64) {}
+  Buffer() : Buffer(128) {}
   explicit Buffer(size_t cap) : capacity_(cap), size_(0), data_(new char[cap]) {
     std::memset(data_.get(), 0, cap);
   }
