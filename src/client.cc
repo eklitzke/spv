@@ -168,6 +168,15 @@ void Client::notify_connected(Connection *conn) {
   }
 }
 
+void Client::notify_peer(const NetAddr &addr) {
+  auto pr = peers_.insert(addr);
+  if (pr.second) {
+    log->info("added new peer {}", addr);
+  } else {
+    log->debug("ignoring duplicate peer {}", addr);
+  }
+}
+
 void Client::update_chain_tip(Connection *conn) {
   if (conn == nullptr) {
     conn = random_connection();

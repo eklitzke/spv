@@ -118,7 +118,21 @@ struct NetAddr {
   NetAddr() : time(time32()), services(0) {}
   NetAddr(const NetAddr &other)
       : time(other.time), services(other.services), addr(other.addr) {}
+
+  inline bool operator==(const NetAddr &other) const {
+    return addr == other.addr;
+  }
 };
 }  // namespace spv
 
 std::ostream &operator<<(std::ostream &o, const spv::BlockHeader &hdr);
+std::ostream &operator<<(std::ostream &o, const spv::NetAddr &addr);
+
+namespace std {
+template <>
+struct hash<spv::NetAddr> {
+  std::size_t operator()(const spv::NetAddr &addr) const noexcept {
+    return std::hash<spv::Addr>{}(addr.addr);
+  }
+};
+}  // namespace std

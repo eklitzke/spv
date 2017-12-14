@@ -167,7 +167,7 @@ void Connection::shutdown() {
 
 void Connection::handle_addr(AddrMsg* addrs) {
   for (const auto& addr : addrs->addrs) {
-    log->info("peer {} sent us new addr {}", peer_, addr.addr);
+    client_->notify_peer(addr);
   }
 }
 void Connection::handle_getaddr(GetAddr* addr) {

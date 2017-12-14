@@ -37,6 +37,11 @@ std::ostream &operator<<(std::ostream &o, const spv::BlockHeader &hdr) {
   return o << ")";
 }
 
+std::ostream &operator<<(std::ostream &o, const spv::NetAddr &addr) {
+  return o << "NetAddr(addr=" << addr.addr << ", services=" << addr.services
+           << ")";
+}
+
 namespace spv {
 std::string BlockHeader::db_encode() const {
   Encoder enc;

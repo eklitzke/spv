@@ -55,6 +55,7 @@ class Client {
  private:
   size_t max_connections_;
   std::unordered_set<Addr> seed_peers_;
+  std::unordered_set<NetAddr> peers_;
   std::unordered_map<Addr, std::unique_ptr<Connection> > connections_;
   Buffer read_buf_;
   bool shutdown_;
@@ -83,6 +84,9 @@ class Client {
 
   // Add headers to the local copy of the chain.
   void notify_headers(const std::vector<BlockHeader> &block_headers);
+
+  // Connections call this method to notify the client of a new peer.
+  void notify_peer(const NetAddr &addr);
 
  private:
   // get peers from a dns seed
