@@ -41,7 +41,7 @@ static void shutdown(int signal) {
   client->shutdown();
   auto loop = uvw::Loop::getDefault();
   loop->walk([](uvw::BaseHandle& h) {
-    main_log->warn("closing loop handle");
+    main_log->warn("closing loop handle {}", (void*)&h);
     h.close();
   });
 }

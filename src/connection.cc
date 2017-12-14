@@ -142,21 +142,27 @@ void Connection::get_headers(const BlockHeader& start_hdr) {
 }
 
 void Connection::shutdown() {
-  log->warn("shutting down connection to peer {}", peer_);
+  log->warn("shutdown: connection to peer {}", peer_);
   if (ping_) {
+    log->debug("ping ptr = {}, count = {}", (void*)ping_.get(),
+               ping_.use_count());
     ping_->stop();
     ping_->close();
     ping_.reset();
   }
   if (pong_) {
+    log->debug("pong ptr = {}, count = {}", (void*)pong_.get(),
+               pong_.use_count());
     pong_->stop();
     pong_->close();
     pong_.reset();
   }
   if (tcp_) {
+    log->debug("tcp ptr = {}, count = {}", (void*)tcp_.get(), tcp_.use_count());
     tcp_->close();
     tcp_.reset();
   }
+  log->debug("finished shutdown to peer {}", peer_);
 }
 
 void Connection::handle_addr(AddrMsg* addrs) {

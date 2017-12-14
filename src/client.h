@@ -32,6 +32,7 @@
 
 namespace uvw {
 class Loop;
+class GetAddrInfoReq;
 }
 
 namespace spv {
@@ -58,7 +59,18 @@ class Client {
   Buffer read_buf_;
   bool shutdown_;
   Chain chain_;
+
   std::shared_ptr<uvw::TimerHandle> hdr_timeout_;
+  std::vector<std::shared_ptr<uvw::GetAddrInfoReq> > dns_requests_;
+
+  // cancel the hdr timeout
+  void cancel_hdr_timeout();
+
+  // cancel all outstanding dns requests
+  void cancel_dns_requests();
+
+  // mark this request as completed
+  void remove_dns_request(uvw::GetAddrInfoReq *req);
 
  protected:
   Peer us_;
