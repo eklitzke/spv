@@ -17,7 +17,6 @@
 #pragma once
 
 #include <rocksdb/db.h>
-#include <memory>
 
 #include "./fields.h"
 
@@ -30,10 +29,7 @@ class Chain {
  public:
   Chain() = delete;
   Chain(const Chain &other) = delete;
-  ~Chain() {
-    save_tip();
-    db_.reset();
-  }
+  ~Chain() { save_tip(); }
 
   // add a block header
   void put_block_header(const BlockHeader &hdr, bool check_duplicate = true);
@@ -44,7 +40,11 @@ class Chain {
   inline const BlockHeader &tip() const { return tip_; }
 
  private:
-  std::unique_ptr<rocksdb::DB> db_;
+  // N.B. There's a lot of RocksDB stuff in valgrind when code shuts down via a
+  // signal handler. This should be a raw pointer because RocksDB somehow
+  // atuomatically deletes any open DB handles, but the code here needs to be
+  // cleaned up to clearnly pass valgrind.
+  rocksdb::DB *db_;
   BlockHeader tip_;
 
   void update_database(const BlockHeader &hdr);

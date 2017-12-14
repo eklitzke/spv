@@ -38,10 +38,8 @@ inline std::string encode_key(hash_t block_hash) {
 Chain::Chain(const std::string &datadir) {
   rocksdb::Options dbopts;
   dbopts.OptimizeForSmallDb();
-  rocksdb::DB *db;
-  auto status = rocksdb::DB::Open(dbopts, datadir, &db);
+  auto status = rocksdb::DB::Open(dbopts, datadir, &db_);
   if (status.ok()) {
-    db_.reset(db);
     tip_ = find_tip();
     log->info("initialized with at {}", tip_);
     return;
@@ -49,9 +47,8 @@ Chain::Chain(const std::string &datadir) {
 
   dbopts.create_if_missing = true;
   dbopts.error_if_exists = true;
-  status = rocksdb::DB::Open(dbopts, datadir, &db);
+  status = rocksdb::DB::Open(dbopts, datadir, &db_);
   assert(status.ok());
-  db_.reset(db);
   update_database(BlockHeader::genesis());
 }
 
