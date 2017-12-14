@@ -18,6 +18,7 @@
 
 #include <cassert>
 #include <string>
+#include <unordered_map>
 
 #include "./encoder.h"
 #include "./logging.h"
@@ -29,6 +30,15 @@ static const rocksdb::ReadOptions read_opts;
 static const rocksdb::WriteOptions write_opts;
 
 static const std::string tip_key = "tip";
+
+static std::unordered_map<size_t, hash_t> checkpoints{
+    {500000, {0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xa7, 0xc0, 0xaa, 0xa2, 0x63,
+              0x0f, 0xbb, 0x2c, 0x0e, 0x47, 0x6a, 0xaf, 0xff, 0xc6, 0x0f, 0x82,
+              0x17, 0x73, 0x75, 0xb2, 0xaa, 0xa2, 0x22, 0x09, 0xf6, 0x06}},
+    {1000000, {0x00, 0x00, 0x00, 0x00, 0x00, 0x47, 0x8e, 0x25, 0x9a, 0x3e, 0xda,
+               0x2f, 0xaf, 0xbe, 0xeb, 0x01, 0x06, 0x62, 0x6f, 0x94, 0x63, 0x47,
+               0x95, 0x5e, 0x99, 0x27, 0x8f, 0xe6, 0xcc, 0x84, 0x84, 0x14}},
+};
 
 inline std::string encode_key(hash_t block_hash) {
   std::reverse(block_hash.begin(), block_hash.end());  // n.b. by value
@@ -107,6 +117,13 @@ void Chain::put_block_header(const BlockHeader &hdr, bool check_duplicate) {
   BlockHeader copy(hdr);
   copy.height = prev_block.height + 1;
   update_database(copy);
+
+  // If this block is at a checkpointed height, verify that we have the expected
+  // block hash.
+  auto it = checkpoints.find(copy.height);
+  if (it != checkpoints.end()) {
+    assert(copy.block_hash == it->second);
+  }
 }
 
 void Chain::save_tip() {
