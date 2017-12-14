@@ -38,9 +38,9 @@ Client::Client(const std::string &datadir, std::shared_ptr<uvw::Loop> loop,
                size_t max_connections)
     : max_connections_(max_connections),
       shutdown_(false),
+      chain_(datadir),
       us_(rand64(), 0, PROTOCOL_VERSION, USER_AGENT),
-      loop_(loop),
-      chain_(datadir) {}
+      loop_(loop) {}
 
 void Client::run() {
   log->debug("connecting to network as {}", us_.user_agent);
