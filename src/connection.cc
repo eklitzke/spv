@@ -233,7 +233,8 @@ void Connection::handle_mempool(Mempool* pool) {
 }
 
 void Connection::handle_inv(Inv* inv) {
-  log->info("inv message with type {}, hash {}", inv->type, to_hex(inv->hash));
+  log->warn("inv message with type {}, hash {}", to_string(inv->type),
+            to_hex(inv->hash));
 }
 
 void Connection::handle_ping(Ping* ping) {

@@ -123,6 +123,12 @@ struct Decoder {
     ccode = static_cast<CCode>(int_code);
   }
 
+  void pull(InvType &inv) {
+    uint32_t int_code;
+    pull(int_code);
+    inv = static_cast<InvType>(int_code);
+  }
+
   void pull(std::string &out) {
     uint64_t sz;
     pull_varint(sz);

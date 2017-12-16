@@ -62,8 +62,9 @@ class Client {
   bool need_headers_;
   Chain chain_;
 
-  std::shared_ptr<uvw::TimerHandle> hdr_timeout_;
   std::vector<std::shared_ptr<uvw::GetAddrInfoReq> > dns_requests_;
+
+  std::shared_ptr<uvw::TimerHandle> hdr_timeout_;
 
   // cancel the hdr timeout
   void cancel_hdr_timeout();

@@ -45,6 +45,22 @@ enum class InvType : uint32_t {
   CMPCT_BLOCK = 4,
 };
 
+inline std::string to_string(const InvType &inv) {
+  switch (inv) {
+    case InvType::ERROR:
+      return "ERROR";
+    case InvType::TX:
+      return "TX";
+    case InvType::BLOCK:
+      return "BLOCK";
+    case InvType::FILTERED_BLOCK:
+      return "FILTERED_BLOCK";
+    case InvType::CMPCT_BLOCK:
+      return "CMPCT_BLOCK";
+  }
+  return "???";
+}
+
 struct Headers {
   uint32_t magic;
   std::string command;

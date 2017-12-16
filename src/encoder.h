@@ -59,6 +59,8 @@ class Encoder : public Buffer {
 
   void push(CCode ccode) { push(static_cast<uint8_t>(ccode)); }
 
+  void push(InvType inv) { push(static_cast<uint32_t>(inv)); }
+
   void push(const Addr &addr) {
     addrbuf_t buf;
     addr.encode_addrbuf(buf);

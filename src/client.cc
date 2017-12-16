@@ -30,8 +30,8 @@ static const std::chrono::seconds NO_REPEAT{0};
 
 // copied from chainparams.cpp
 static const std::vector<std::string> testSeeds = {
-    //"testnet-seed.bitcoin.jonasschnelli.ch",
-    "seed.tbtc.petertodd.org", "testnet-seed.bluematt.me",
+    "testnet-seed.bitcoin.jonasschnelli.ch", "seed.tbtc.petertodd.org",
+    "testnet-seed.bluematt.me",
 };
 
 Client::Client(const std::string &datadir, std::shared_ptr<uvw::Loop> loop,
@@ -205,7 +205,7 @@ void Client::shutdown() {
 }
 
 void Client::notify_connected(Connection *conn) {
-  if (!hdr_timeout_) {
+  if (need_headers_ && !hdr_timeout_) {
     log->info("starting header download");
     sync_more_headers(conn);
   }
@@ -233,7 +233,7 @@ void Client::sync_more_headers(Connection *conn) {
     conn = random_connection();
     assert(conn != nullptr);
   }
-  auto peer = conn->peer();
+  auto peer = conn->peer();  // captured by value
   assert(!hdr_timeout_);
   hdr_timeout_ = loop_->resource<uvw::TimerHandle>();
   hdr_timeout_->once<uvw::ErrorEvent>([this](const auto &, auto &timer) {
@@ -254,8 +254,7 @@ void Client::sync_more_headers(Connection *conn) {
 void Client::notify_headers(const std::vector<BlockHeader> &block_headers) {
   cancel_hdr_timeout();
   if (block_headers.empty() && chain_.tip_is_recent()) {
-    log->info("header syncing finished, going into wait mode; tip is {}",
-              chain_.tip());
+    log->info("header syncing finished, tip is {}", chain_.tip());
     need_headers_ = false;
     return;
   }
