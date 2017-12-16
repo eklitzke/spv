@@ -43,7 +43,7 @@ class Client {
 
  public:
   Client(const std::string &datadir, std::shared_ptr<uvw::Loop> loop,
-         size_t max_connections);
+         size_t max_connections, size_t seed_connections);
   Client() = delete;
   Client(const Client &other) = delete;
 
@@ -54,6 +54,7 @@ class Client {
 
  private:
   size_t max_connections_;
+  size_t max_seed_connections_;
   std::unordered_set<Addr> seed_peers_;
   std::unordered_set<NetAddr> peers_;
   std::unordered_map<Addr, std::unique_ptr<Connection> > connections_;

@@ -35,8 +35,9 @@ static const std::vector<std::string> testSeeds = {
 };
 
 Client::Client(const std::string &datadir, std::shared_ptr<uvw::Loop> loop,
-               size_t max_connections)
+               size_t max_connections, size_t seed_connections)
     : max_connections_(max_connections),
+      max_seed_connections_(seed_connections),
       shutdown_(false),
       chain_(datadir),
       us_(rand64(), 0, PROTOCOL_VERSION, USER_AGENT),
@@ -68,13 +69,34 @@ void Client::lookup_seed(const std::string &seed) {
 }
 
 void Client::connect_to_peers() {
-  if (shutdown_ || connections_.size() >= max_connections_) {
+  if (shutdown_) {
+    log->debug("connect_to_peers(): skipping due to shutdown");
     return;
+  } else if (connections_.size() >= max_connections_) {
+    log->debug("connect_to_peers(): connection list already full");
+    return;
+  }
+
+  // prefer peers we got addr messages for
+  std::unordered_set<Addr> candidates;
+  for (const auto &p : peers_) {
+    candidates.insert(p.addr);
+  }
+
+  // if no such peers are available, use the seed list
+  if (candidates.empty()) {
+    if (connections_.size() >= max_seed_connections_) {
+      log->debug("need an addr message to continue");
+      return;
+    }
+    for (const auto &p : seed_peers_) {
+      candidates.insert(p);
+    }
   }
 
   std::vector<Addr> peers(seed_peers_.cbegin(), seed_peers_.cend());
   shuffle(peers);
-  while (connections_.size() < max_connections_ && !peers.empty()) {
+  while (connections_.size() < max_seed_connections_ && !peers.empty()) {
     auto it = peers.begin();
     connect_to_peer(*it);
     if (seed_peers_.erase(*it) != 1) {
