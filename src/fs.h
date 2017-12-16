@@ -21,4 +21,15 @@
 namespace spv {
 // recursively delete a directory
 int recursive_delete(const std::string &dirname);
+
+class FileLock {
+ public:
+  FileLock() : fd_(-1) {}
+  ~FileLock();
+  int lock(const std::string &fname);
+
+ private:
+  int fd_;
+};
+
 }  // namespace spv

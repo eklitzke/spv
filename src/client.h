@@ -93,6 +93,9 @@ class Client {
   // notify that there was an error
   void notify_error(Connection *conn, const std::string &why);
 
+  // notify of a new inv message
+  void notify_inv(const Inv &inv);
+
   // find a new addr and connect to it
   void connect_to_new_peer();
 

@@ -34,6 +34,8 @@ DECLARE_LOGGER(main_log)
 std::unique_ptr<spv::Client> client;
 }
 
+static char lockname[] = ".lock";
+
 static void shutdown(void) {
   client->shutdown();
   auto loop = uvw::Loop::getDefault();
@@ -92,6 +94,12 @@ int main(int argc, char** argv) {
     data_dir = args["data-dir"].as<std::string>();
   } catch (const cxxopts::option_not_exists_exception& exc) {
     std::cerr << exc.what() << "\n\n" << options.help();
+    return 1;
+  }
+
+  spv::FileLock lock;
+  if (lock.lock(lockname)) {
+    main_log->error("failed to acquire lock on lock file: {}", lockname);
     return 1;
   }
 

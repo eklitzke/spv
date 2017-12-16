@@ -232,10 +232,7 @@ void Connection::handle_mempool(Mempool* pool) {
   log->debug("ignoring mempool message");
 }
 
-void Connection::handle_inv(Inv* inv) {
-  log->warn("inv message with type {}, hash {}", to_string(inv->type),
-            to_hex(inv->hash));
-}
+void Connection::handle_inv(Inv* inv) { client_->notify_inv(*inv); }
 
 void Connection::handle_ping(Ping* ping) {
   Pong pong;

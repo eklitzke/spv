@@ -17,8 +17,10 @@
 #include "./fs.h"
 
 #include <fts.h>
+#include <sys/file.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 #include "./logging.h"
 
@@ -72,5 +74,23 @@ int recursive_delete(const std::string &dirname) {
   }
   fts_close(ftsp);
   return 0;
+}
+
+FileLock::~FileLock() {
+  for (;;) {
+    if (close(fd_) == 0) {
+      break;
+    } else if (errno == EBADF) {
+      log->debug("ignoring EBADF from close");
+      break;
+    }
+  }
+}
+
+int FileLock::lock(const std::string &fname) {
+  assert(fd_ == -1);
+  fd_ = open(fname.c_str(), O_RDWR | O_CREAT);
+  assert(fd_ != -1);
+  return flock(fd_, LOCK_EX | LOCK_NB);
 }
 }  // namespace spv

@@ -53,7 +53,7 @@ void Client::run() {
 void Client::lookup_seed(const std::string &seed) {
   auto request = loop_->resource<uvw::GetAddrInfoReq>();
   request->on<uvw::ErrorEvent>([=](const auto &, auto &req) {
-    log->error("async dns resolution to {} failed", seed);
+    log->warn("async dns resolution to {} failed", seed);
   });
   request->on<uvw::AddrInfoEvent>([=](const auto &event, auto &req) {
     for (const addrinfo *p = event.data.get(); p != nullptr; p = p->ai_next) {
@@ -264,6 +264,11 @@ void Client::notify_headers(const std::vector<BlockHeader> &block_headers) {
   }
   chain_.save_tip();
   sync_more_headers();
+}
+
+void Client::notify_inv(const Inv &inv) {
+  log->warn("inv message with type {}, hash {}", to_string(inv.type),
+            to_hex(inv.hash));
 }
 
 Connection *Client::random_connection() {

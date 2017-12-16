@@ -18,6 +18,7 @@
 
 #include <cstddef>
 #include <ostream>
+#include <sstream>
 #include <string>
 
 #include "./addr.h"
@@ -37,12 +38,17 @@ enum class CCode : uint8_t {
   CHECKPOINT = 0x43,
 };
 
+const uint32_t WITNESS_FLAG = 1 << 30;
+
 enum class InvType : uint32_t {
   ERROR = 0,
   TX = 1,
   BLOCK = 2,
   FILTERED_BLOCK = 3,
   CMPCT_BLOCK = 4,
+  WITNESS_BLOCK = BLOCK | WITNESS_FLAG,
+  WITNESS_TX = TX | WITNESS_FLAG,
+  FILTERED_WITNESS_BLOCK = FILTERED_BLOCK | WITNESS_FLAG,
 };
 
 inline std::string to_string(const InvType &inv) {
@@ -57,8 +63,16 @@ inline std::string to_string(const InvType &inv) {
       return "FILTERED_BLOCK";
     case InvType::CMPCT_BLOCK:
       return "CMPCT_BLOCK";
+    case InvType::WITNESS_BLOCK:
+      return "WITNESS_BLOCK";
+    case InvType::WITNESS_TX:
+      return "WITNESS_TX";
+    case InvType::FILTERED_WITNESS_BLOCK:
+      return "FILTERED_WITNESS_BLOCK";
   }
-  return "???";
+  std::ostringstream os;
+  os << "INV[" << static_cast<uint32_t>(inv) << "]";
+  return os.str();
 }
 
 struct Headers {
