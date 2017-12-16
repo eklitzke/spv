@@ -81,7 +81,9 @@ void Chain::update_database(const BlockHeader &hdr) {
 
   const std::string key = encode_key(hdr.block_hash);
   const std::string val = hdr.db_encode();
+#if 0
   log->debug("writing {} bytes for block {}", val.size(), hdr);
+#endif
   auto s = db_->Put(write_opts, key, val);
   assert(s.ok());
 }

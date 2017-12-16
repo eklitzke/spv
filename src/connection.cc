@@ -41,6 +41,11 @@ Connection::Connection(Client* client, const Addr& addr)
       tcp_(client->loop_->resource<uvw::TcpHandle>()),
       ping_nonce_(0) {
   assert(!addr.ip().empty() && addr.port());
+
+  // Start this buffer at 256k bytes. A large value is chosen because as a
+  // baseline, a full getheaders message will be 80 bytes per header * 2000
+  // headers = 160k bytes.
+  buf_.reserve(256 << 10);
 }
 
 void Connection::connect() {
@@ -246,7 +251,7 @@ void Connection::handle_pong(Pong* pong) {
           peer_, pong->nonce, ping_nonce_);
       shutdown();
     } else {
-      log->debug("peer {} sent us correct pong nonce!", peer_);
+      log->debug("peer {} sent us correct pong nonce", peer_);
       pong_->close();
     }
     pong_.reset();

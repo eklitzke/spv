@@ -173,6 +173,18 @@ void Client::remove_connection(Connection *conn) {
     return;
   }
 
+  bool erased = false;
+  for (auto it = peers_.begin(); it != peers_.end(); ++it) {
+    if (it->addr == conn->peer().addr) {
+      peers_.erase(it);
+      erased = true;
+      break;
+    }
+  }
+  if (!erased && !shutdown_) {
+    log->error("failed to remove peer {} after error", conn->peer());
+  }
+
   // TODO: double check that the conn destructor actually shuts down its
   // resources properly.
   connections_.erase(it);
@@ -222,13 +234,15 @@ void Client::update_chain_tip(Connection *conn) {
   }
   assert(!hdr_timeout_);
   hdr_timeout_ = loop_->resource<uvw::TimerHandle>();
-  hdr_timeout_->once<uvw::ErrorEvent>([](const auto &, auto &timer) {
+  hdr_timeout_->once<uvw::ErrorEvent>([this](const auto &, auto &timer) {
     log->error("got error from header timer");
+    hdr_timeout_.reset();
     timer.close();
   });
   hdr_timeout_->on<uvw::TimerEvent>([this](const auto &, auto &timer) {
     log->error("get headers timeout");
     timer.close();
+    hdr_timeout_.reset();
     update_chain_tip();
   });
   hdr_timeout_->start(HEADER_TIMEOUT, NO_REPEAT);

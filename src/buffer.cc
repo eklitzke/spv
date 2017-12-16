@@ -21,20 +21,28 @@
 namespace spv {
 MODULE_LOGGER
 
+void Buffer::reserve(size_t capacity) {
+  assert(capacity >= size_);
+  if (capacity != capacity_) {
+    log->debug("{} buffer from {} to {}",
+               capacity > capacity_ ? "growing" : "shrinking", capacity_,
+               capacity);
+    std::unique_ptr<char[]> new_data(new char[capacity]);
+    std::memmove(new_data.get(), data_.get(), capacity_);
+    if (capacity > capacity_) {
+      std::memset(new_data.get() + capacity_, 0, capacity - capacity_);
+    }
+    data_ = std::move(new_data);
+    capacity_ = capacity;
+  }
+}
+
 void Buffer::ensure_capacity(size_t len) {
   size_t new_capacity = capacity_;
   while (size_ + len > new_capacity) {
     new_capacity *= 2;
   }
-  const size_t extra = new_capacity - capacity_;
-  if (extra) {
-    log->debug("growing buffer from {} to {}", capacity_, new_capacity);
-    std::unique_ptr<char[]> new_data(new char[new_capacity]);
-    std::memmove(new_data.get(), data_.get(), capacity_);
-    std::memset(new_data.get() + capacity_, 0, extra);
-    data_ = std::move(new_data);
-    capacity_ = new_capacity;
-  }
+  reserve(new_capacity);
 }
 
 std::unique_ptr<char[]> Buffer::move_buffer(size_t &sz) {

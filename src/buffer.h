@@ -76,6 +76,9 @@ class Buffer {
     std::memset(data_.get() + size_, 0, capacity_ - size_);
   }
 
+  // Reserve total storage space for this many bytes.
+  void reserve(size_t capacity);
+
  private:
   size_t capacity_;
   size_t size_;
