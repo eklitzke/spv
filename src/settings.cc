@@ -23,7 +23,15 @@
 #include "./logging.h"
 
 namespace spv {
-int parse_settings(int argc, char** argv, Settings* settings) {
+MODULE_LOGGER
+
+static Settings settings_;
+static bool did_parse = false;
+
+const Settings& parse_settings(int argc, char** argv, int* ret) {
+  assert(!did_parse);
+  did_parse = true;
+
   cxxopts::Options options("spv", "A simple Bitcoin client.");
   auto g = options.add_options();
   g("d,debug", "Enable debugging");
@@ -33,31 +41,53 @@ int parse_settings(int argc, char** argv, Settings* settings) {
   g("v,version", "Print version information");
   g("data-dir", "Path to the SPV database",
     cxxopts::value<std::string>()->default_value(".spv"));
+  g("lock-file", "Path to the SPV lock file",
+    cxxopts::value<std::string>()->default_value(".lock"));
   g("delete-data", "Delete the SPV data directory");
+
+  g("protocol-version", "Protocol version to advertise",
+    cxxopts::value<uint32_t>()->default_value(PROTOCOL_VERSION));
+  g("protocol-port", "Port to use",
+    cxxopts::value<uint16_t>()->default_value(PROTOCOL_PORT));
+  g("protocol-user-agent", "User agent to advertise",
+    cxxopts::value<std::string>()->default_value(USER_AGENT));
 
   try {
     auto args = options.parse(argc, argv);
     if (args.count("help")) {
       std::cout << options.help();
-      return 0;
+      *ret = 0;
+      goto finish;
     }
     if (args.count("debug")) {
       spdlog::set_level(spdlog::level::debug);
-      settings->debug = true;
+      settings_.debug = true;
     }
     if (args.count("delete-data")) {
       spv::recursive_delete(".spv");
     }
     if (args.count("version")) {
       std::cout << PACKAGE_STRING << std::endl;
-      return 0;
+      *ret = 0;
+      goto finish;
     }
-    settings->max_connections = args["connections"].as<std::size_t>();
-    settings->datadir = args["data-dir"].as<std::string>();
+    settings_.max_connections = args["connections"].as<std::size_t>();
+    settings_.datadir = args["data-dir"].as<std::string>();
+    settings_.lockfile = args["lock-file"].as<std::string>();
+    settings_.version = args["protocol-version"].as<uint32_t>();
+    settings_.port = args["protocol-port"].as<uint16_t>();
+    settings_.user_agent = args["protocol-user-agent"].as<std::string>();
   } catch (const cxxopts::option_not_exists_exception& exc) {
     std::cerr << exc.what() << "\n\n" << options.help();
-    return 1;
+    *ret = 1;
+    goto finish;
   }
-  return -1;
+finish:
+  return settings_;
+}
+
+const Settings& get_settings() {
+  assert(did_parse);
+  return settings_;
 }
 }  // namespace spv

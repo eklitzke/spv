@@ -85,8 +85,11 @@ DECLARE_ENCODE(HeadersMsg) {
 
 DECLARE_ENCODE(Inv) {
   Encoder enc(headers);
-  enc.push(type);
-  enc.push(hash);
+  enc.push_varint(invs.size());
+  for (const auto &pr : invs) {
+    enc.push(pr.first);
+    enc.push(pr.second);
+  }
   return enc.serialize(sz);
 }
 
@@ -252,8 +255,20 @@ DECLARE_PARSER(headers, [](auto &dec, const auto &hdrs) {
 
 DECLARE_PARSER(inv, [](auto &dec, const auto &hdrs) {
   auto msg = std::make_unique<Inv>(hdrs);
-  dec.pull(msg->type);
-  dec.pull(msg->hash);
+  uint64_t count;
+  dec.pull_varint(count);
+  if (count > 50000) {
+    std::ostringstream os;
+    os << "inv count " << count << " is too large, ignoring";
+    throw BadMessage(os.str());
+  }
+  for (size_t i = 0; i < count; i++) {
+    InvType inv_type;
+    hash_t hash;
+    dec.pull(inv_type);
+    dec.pull(hash);
+    msg->invs.emplace_back(inv_type, hash);
+  }
   return msg;
 });
 

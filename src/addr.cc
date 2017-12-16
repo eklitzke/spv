@@ -20,8 +20,8 @@
 #include <cassert>
 #include <cstring>
 
-#include "./config.h"
 #include "./logging.h"
+#include "./settings.h"
 
 namespace spv {
 MODULE_LOGGER
@@ -52,7 +52,7 @@ Addr::Addr(const addrinfo *ai) : af_(ai->ai_family) {
       log->warn("unknown address family {}", ai->ai_addr->sa_family);
       return;
   }
-  port_ = PROTOCOL_PORT;
+  port_ = get_settings().port;
   ip_ = buf;
   assert(ip_.size() < INET6_ADDRSTRLEN);
 }

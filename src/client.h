@@ -53,7 +53,7 @@ class Client {
   void shutdown();
 
  private:
-  Settings settings_;
+  const Settings &settings_;
   std::unordered_set<Addr> seed_peers_;
   std::unordered_set<NetAddr> peers_;
   std::unordered_map<Addr, std::unique_ptr<Connection> > connections_;
@@ -94,7 +94,7 @@ class Client {
   void notify_error(Connection *conn, const std::string &why);
 
   // notify of a new inv message
-  void notify_inv(Connection *conn, const Inv &inv);
+  void notify_inv(Connection *conn, InvType type, const hash_t &hash);
 
   // find a new addr and connect to it
   void connect_to_new_peer();

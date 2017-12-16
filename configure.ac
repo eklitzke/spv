@@ -65,10 +65,10 @@ AC_CHECK_LIB([rocksdb], [rocksdb_open],
 
 AC_DEFINE_UNQUOTED([USER_AGENT], ["eklitzke/$PACKAGE_STRING"], [Our user agent.])
 AC_DEFINE([PROTOCOL_MAGIC], [0x0709110B], [P2P protocol magic.])
-AC_DEFINE([PROTOCOL_PORT], [18333], [P2P protocol port.])
+AC_DEFINE([PROTOCOL_PORT], ["18333"], [P2P protocol port.])
 
 # See https://bitcoin.org/en/developer-reference#protocol-versions for the meaning of this
-AC_DEFINE([PROTOCOL_VERSION], [70012], [P2P protocol version.])
+AC_DEFINE([PROTOCOL_VERSION], ["70012"], [P2P protocol version.])
 
 AC_CONFIG_FILES([Makefile
                  src/Makefile])

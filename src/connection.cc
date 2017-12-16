@@ -136,7 +136,7 @@ void Connection::send_msg(const Message& msg) {
 
 void Connection::send_version() {
   Version ver;
-  ver.version = PROTOCOL_VERSION;
+  ver.version = client_->us_.version;
   ver.services = client_->us_.services;
   ver.addr_recv.addr = peer_.addr;
   ver.nonce = client_->us_.nonce;
@@ -232,7 +232,11 @@ void Connection::handle_mempool(Mempool* pool) {
   log->debug("ignoring mempool message");
 }
 
-void Connection::handle_inv(Inv* inv) { client_->notify_inv(this, *inv); }
+void Connection::handle_inv(Inv* inv) {
+  for (const auto& pr : inv->invs) {
+    client_->notify_inv(this, pr.first, pr.second);
+  }
+}
 
 void Connection::handle_ping(Ping* ping) {
   Pong pong;

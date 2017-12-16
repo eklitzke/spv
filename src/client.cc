@@ -18,7 +18,6 @@
 
 #include <cassert>
 
-#include "./config.h"
 #include "./logging.h"
 #include "./uvw.h"
 
@@ -39,7 +38,7 @@ Client::Client(const Settings &settings, std::shared_ptr<uvw::Loop> loop)
       shutdown_(false),
       need_headers_(true),
       chain_(settings.datadir),
-      us_(rand64(), 0, PROTOCOL_VERSION, USER_AGENT),
+      us_(rand64(), 0, settings.version, settings.user_agent),
       loop_(loop) {}
 
 void Client::run() {
@@ -266,9 +265,9 @@ void Client::notify_headers(const std::vector<BlockHeader> &block_headers) {
   sync_more_headers();
 }
 
-void Client::notify_inv(Connection *conn, const Inv &inv) {
-  log->warn("inv message from peer {} with type {}, hash {}", conn->peer(),
-            to_string(inv.type), to_hex(inv.hash));
+void Client::notify_inv(Connection *conn, InvType type, const hash_t &hash) {
+  log->warn("inv from peer {} with type {}, hash {}", conn->peer(),
+            to_string(type), to_hex(hash));
 }
 
 Connection *Client::random_connection() {

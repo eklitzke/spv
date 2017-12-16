@@ -103,12 +103,10 @@ struct HeadersMsg : Message {
 };
 
 struct Inv : Message {
-  InvType type;
-  hash_t hash;
+  std::vector<std::pair<InvType, hash_t>> invs;
 
   Inv() : Inv(Headers("inv")) {}
-  explicit Inv(const Headers &hdrs)
-      : Message(hdrs), type(InvType::ERROR), hash(empty_hash) {}
+  explicit Inv(const Headers &hdrs) : Message(hdrs) {}
   FINAL_ENCODE
 };
 

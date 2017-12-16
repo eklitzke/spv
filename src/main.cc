@@ -32,8 +32,6 @@ DECLARE_LOGGER(main_log)
 std::unique_ptr<spv::Client> client;
 }
 
-static char lockname[] = ".lock";
-
 static void shutdown(void) {
   client->shutdown();
   auto loop = uvw::Loop::getDefault();
@@ -59,14 +57,15 @@ static void install_shutdown(int signum) {
 }
 
 int main(int argc, char** argv) {
-  spv::Settings settings;
-  int ret = spv::parse_settings(argc, argv, &settings);
+  int ret = -1;
+  const spv::Settings& settings = spv::parse_settings(argc, argv, &ret);
   if (ret != -1) {
     return ret;
   }
   spv::FileLock lock;
-  if (lock.lock(lockname)) {
-    main_log->error("failed to acquire lock on lock file: {}", lockname);
+  if (lock.lock(settings.lockfile)) {
+    main_log->error("failed to acquire lock on lock file: {}",
+                    settings.lockfile);
     return 1;
   }
 

@@ -19,15 +19,34 @@
 #include <cstddef>
 #include <string>
 
+#include "./config.h"
+
 namespace spv {
 
 struct Settings {
   bool debug;
   size_t max_connections;
   std::string datadir;
+  std::string lockfile;
 
-  Settings() : debug(false), max_connections(8), datadir(".spv") {}
+  // protocol options
+  uint32_t version;
+  uint16_t port;
+  std::string user_agent;
+
+  Settings()
+      : debug(false),
+        max_connections(8),
+        datadir(".spv"),
+        lockfile(".lock"),
+        version(0),
+        port(0),
+        user_agent(USER_AGENT) {}
 };
 
-int parse_settings(int argc, char **argv, Settings *settings);
+// parse settings from the command line arguments
+const Settings &parse_settings(int argc, char **argv, int *ret);
+
+// get the global settings singleton
+const Settings &get_settings();
 }  // namespace spv
