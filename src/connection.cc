@@ -161,7 +161,8 @@ void Connection::get_headers(const std::vector<hash_t>& locator_hashes,
 }
 
 void Connection::get_headers(const BlockHeader& start_hdr) {
-  log->info("fetching headers starting at block {}", start_hdr);
+  log->info("fetching headers from peer {} starting at block {}", peer_,
+            start_hdr);
   std::vector<hash_t> needed{start_hdr.block_hash};
   return get_headers(needed);
 }
@@ -198,10 +199,10 @@ void Connection::handle_addr(AddrMsg* addrs) {
       new_peers = true;
     }
   }
-  if (new_peers && get_addr_) {
-    get_addr_->stop();
-    get_addr_->close();
-    get_addr_.reset();
+  if (new_peers && getaddr_) {
+    getaddr_->stop();
+    getaddr_->close();
+    getaddr_.reset();
   }
 }
 void Connection::handle_getaddr(GetAddr* addr) {
@@ -320,21 +321,21 @@ void Connection::handle_version(Version* ver) {
 }
 
 void Connection::get_new_addrs() {
-  assert(!get_addr_);
-  get_addr_ = client_->loop_->resource<uvw::TimerHandle>();
-  get_addr_->once<uvw::ErrorEvent>([](const auto&, auto& timer) {
-    log->error("got error from get_addr timer");
+  assert(!getaddr_);
+  getaddr_ = client_->loop_->resource<uvw::TimerHandle>();
+  getaddr_->once<uvw::ErrorEvent>([](const auto&, auto& timer) {
+    log->error("got error from getaddr timer");
     timer.close();
   });
-  get_addr_->on<uvw::TimerEvent>([this](const auto&, auto& timer) {
+  getaddr_->on<uvw::TimerEvent>([this](const auto&, auto& timer) {
     log->info(
-        "peer {} failed to respond to get_addr, asking client to connect to "
+        "peer {} failed to respond to getaddr, asking client to connect to "
         "new seed peer",
         peer_);
     client_->connect_to_new_peer();
     timer.close();
   });
-  get_addr_->start(std::chrono::seconds(5), std::chrono::seconds(0));
+  getaddr_->start(std::chrono::seconds(5), std::chrono::seconds(0));
 }
 
 }  // namespace spv

@@ -360,7 +360,8 @@ std::unique_ptr<Message> decode_message(const char *data, size_t size,
     log->debug("incomplete parse: {}", exc.what());
 #endif
   } catch (const UnknownMessage &exc) {
-    log->warn("unhandled p2p message: '{}'", exc.what());
+    std::string msg(exc.what());
+    if (msg != "alert") log->warn("unhandled p2p message: '{}'", msg);
   } catch (const BadMessage &exc) {
     log->warn("bad p2p message parse: {}", exc.what());
   }

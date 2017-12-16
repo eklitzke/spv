@@ -105,7 +105,7 @@ class Client {
   }
 
   // enqueue connections
-  void remove_connection(const Addr &addr);
+  void remove_connection(Connection *conn);
 
   // select a random connection
   Connection *random_connection();

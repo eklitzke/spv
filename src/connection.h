@@ -84,7 +84,7 @@ class Connection {
   std::shared_ptr<uvw::TimerHandle> ping_;
   std::shared_ptr<uvw::TimerHandle> pong_;
   std::shared_ptr<uvw::TimerHandle> verack_;
-  std::shared_ptr<uvw::TimerHandle> get_addr_;
+  std::shared_ptr<uvw::TimerHandle> getaddr_;
 
   // returns true if a message was actually read
   bool read_message();

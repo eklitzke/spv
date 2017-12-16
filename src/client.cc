@@ -125,7 +125,7 @@ void Client::connect_to_addr(const Addr &addr) {
                 exc.name(), exc.code());
     }
     cancel_timer();
-    remove_connection(addr);
+    remove_connection(conn);
   });
   conn->tcp_->on<uvw::DataEvent>([=](const auto &data, auto &) {
     conn->read(data.data.get(), data.length);
@@ -136,14 +136,15 @@ void Client::connect_to_addr(const Addr &addr) {
     connect_to_new_peer();
   });
   conn->tcp_->once<uvw::ConnectEvent>([=](const auto &, auto &) {
-    log->info("connected to new peer {}", addr);
+    log->info("connected to new peer {}, connections = {}", addr,
+              connections_.size());
     cancel_timer();
     conn->tcp_->read();
     conn->send_version();
   });
   conn->tcp_->once<uvw::EndEvent>([=](const auto &, auto &c) {
     log->info("remote peer {} closed connection", addr);
-    remove_connection(addr);
+    remove_connection(conn);
   });
   conn->connect();
 
@@ -151,28 +152,29 @@ void Client::connect_to_addr(const Addr &addr) {
       [=](const auto &, auto &timer) { timer.close(); });
   timer->on<uvw::TimerEvent>([=](const auto &, auto &timer) {
     log->warn("connection to {} timed out", conn->peer());
-    remove_connection(addr);
+    remove_connection(conn);
     timer.close();
   });
   timer->start(std::chrono::seconds(1), NO_REPEAT);
 }
 
 void Client::connect_to_new_peer() {
-  if (!shutdown_) {
+  if (!shutdown_ && connections_.size() < max_connections_) {
     connect_to_addr(select_peer());
   }
 }
 
-void Client::remove_connection(const Addr &addr) {
-  log->warn("removing connection to {}", addr);
+void Client::remove_connection(Connection *conn) {
+  const Addr &addr = conn->peer().addr;
+  log->warn("removing connection to {}", conn->peer());
   auto it = connections_.find(addr);
   if (it == connections_.end()) {
     log->warn("connection {} was already removed", addr);
     return;
   }
-  if (!it->second->tcp_->closing()) {
-    it->second->tcp_->close();
-  }
+
+  // TODO: double check that the conn destructor actually shuts down its
+  // resources properly.
   connections_.erase(it);
 }
 
@@ -210,7 +212,7 @@ void Client::notify_peer(const NetAddr &addr) {
 
 void Client::notify_error(Connection *conn, const std::string &why) {
   log->warn("error on connection to {}, reason: {}", conn->peer(), why);
-  remove_connection(conn->peer().addr);
+  remove_connection(conn);
 }
 
 void Client::update_chain_tip(Connection *conn) {
