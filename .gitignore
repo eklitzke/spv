@@ -1,6 +1,5 @@
 Makefile
+\.lock
 \.spv/
-build-ax
+build-aux
 src/spv
-*.pb.h
-*.pb.cc

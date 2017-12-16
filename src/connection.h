@@ -110,3 +110,5 @@ class Connection {
   void get_new_addrs();
 };
 }  // namespace spv
+
+std::ostream& operator<<(std::ostream& o, const spv::Connection& conn);

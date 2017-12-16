@@ -34,12 +34,11 @@ static const std::vector<std::string> testSeeds = {
     "testnet-seed.bluematt.me",
 };
 
-Client::Client(const std::string &datadir, std::shared_ptr<uvw::Loop> loop,
-               size_t max_connections)
-    : max_connections_(max_connections),
+Client::Client(const Settings &settings, std::shared_ptr<uvw::Loop> loop)
+    : settings_(settings),
       shutdown_(false),
       need_headers_(true),
-      chain_(datadir),
+      chain_(settings.datadir),
       us_(rand64(), 0, PROTOCOL_VERSION, USER_AGENT),
       loop_(loop) {}
 
@@ -160,7 +159,7 @@ void Client::connect_to_addr(const Addr &addr) {
 }
 
 void Client::connect_to_new_peer() {
-  if (!shutdown_ && connections_.size() < max_connections_) {
+  if (!shutdown_ && connections_.size() < settings_.max_connections) {
     connect_to_addr(select_peer());
   }
 }
@@ -215,7 +214,8 @@ void Client::notify_peer(const NetAddr &addr) {
   auto pr = peers_.insert(addr);
   if (pr.second) {
     log->info("added new peer {}, peer list size {}", addr, peers_.size());
-    if (connections_.size() < max_connections_ && !is_connected_to_addr(addr)) {
+    if (connections_.size() < settings_.max_connections &&
+        !is_connected_to_addr(addr)) {
       connect_to_addr(addr.addr);
     }
   } else {
@@ -266,9 +266,9 @@ void Client::notify_headers(const std::vector<BlockHeader> &block_headers) {
   sync_more_headers();
 }
 
-void Client::notify_inv(const Inv &inv) {
-  log->warn("inv message with type {}, hash {}", to_string(inv.type),
-            to_hex(inv.hash));
+void Client::notify_inv(Connection *conn, const Inv &inv) {
+  log->warn("inv message from peer {} with type {}, hash {}", conn->peer(),
+            to_string(inv.type), to_hex(inv.hash));
 }
 
 Connection *Client::random_connection() {

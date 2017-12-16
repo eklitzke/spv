@@ -20,12 +20,10 @@
 #include <string>
 #include <vector>
 
-#include "./cxxopts.hpp"
-
 #include "./client.h"
-#include "./config.h"
 #include "./fs.h"
 #include "./logging.h"
+#include "./settings.h"
 #include "./util.h"
 #include "./uvw.h"
 
@@ -61,42 +59,11 @@ static void install_shutdown(int signum) {
 }
 
 int main(int argc, char** argv) {
-  cxxopts::Options options("spv", "A simple Bitcoin client.");
-  auto g = options.add_options();
-  g("d,debug", "Enable debugging");
-  g("c,connections", "Max connections to make",
-    cxxopts::value<std::size_t>()->default_value("8"));
-  g("h,help", "Print help information");
-  g("v,version", "Print version information");
-  g("data-dir", "Path to the SPV database",
-    cxxopts::value<std::string>()->default_value(".spv"));
-  g("delete-data", "Delete the SPV data directory");
-
-  std::string data_dir;
-  std::size_t connections;
-  try {
-    auto args = options.parse(argc, argv);
-    if (args.count("help")) {
-      std::cout << options.help();
-      return 0;
-    }
-    if (args.count("debug")) {
-      spdlog::set_level(spdlog::level::debug);
-    }
-    if (args.count("delete-data")) {
-      spv::recursive_delete(".spv");
-    }
-    if (args.count("version")) {
-      std::cout << PACKAGE_STRING << std::endl;
-      return 0;
-    }
-    connections = args["connections"].as<std::size_t>();
-    data_dir = args["data-dir"].as<std::string>();
-  } catch (const cxxopts::option_not_exists_exception& exc) {
-    std::cerr << exc.what() << "\n\n" << options.help();
-    return 1;
+  spv::Settings settings;
+  int ret = spv::parse_settings(argc, argv, &settings);
+  if (ret != -1) {
+    return ret;
   }
-
   spv::FileLock lock;
   if (lock.lock(lockname)) {
     main_log->error("failed to acquire lock on lock file: {}", lockname);
@@ -104,7 +71,7 @@ int main(int argc, char** argv) {
   }
 
   auto loop = uvw::Loop::getDefault();
-  client.reset(new spv::Client(data_dir, loop, connections));
+  client.reset(new spv::Client(settings, loop));
   install_shutdown(SIGINT);
   install_shutdown(SIGTERM);
   client->run();

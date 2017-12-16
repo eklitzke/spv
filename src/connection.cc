@@ -232,7 +232,7 @@ void Connection::handle_mempool(Mempool* pool) {
   log->debug("ignoring mempool message");
 }
 
-void Connection::handle_inv(Inv* inv) { client_->notify_inv(*inv); }
+void Connection::handle_inv(Inv* inv) { client_->notify_inv(this, *inv); }
 
 void Connection::handle_ping(Ping* ping) {
   Pong pong;
@@ -340,5 +340,8 @@ void Connection::get_new_addrs() {
   });
   getaddr_->start(std::chrono::seconds(5), std::chrono::seconds(0));
 }
-
 }  // namespace spv
+
+std::ostream& operator<<(std::ostream& o, const spv::Connection& conn) {
+  return o << "Connection(" << conn.peer() << ")";
+}

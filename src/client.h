@@ -28,6 +28,7 @@
 #include "./config.h"
 #include "./connection.h"
 #include "./peer.h"
+#include "./settings.h"
 #include "./util.h"
 
 namespace uvw {
@@ -42,8 +43,7 @@ class Client {
   friend Connection;
 
  public:
-  Client(const std::string &datadir, std::shared_ptr<uvw::Loop> loop,
-         size_t max_connections);
+  Client(const Settings &settings, std::shared_ptr<uvw::Loop> loop);
   Client() = delete;
   Client(const Client &other) = delete;
 
@@ -53,7 +53,7 @@ class Client {
   void shutdown();
 
  private:
-  size_t max_connections_;
+  Settings settings_;
   std::unordered_set<Addr> seed_peers_;
   std::unordered_set<NetAddr> peers_;
   std::unordered_map<Addr, std::unique_ptr<Connection> > connections_;
@@ -94,7 +94,7 @@ class Client {
   void notify_error(Connection *conn, const std::string &why);
 
   // notify of a new inv message
-  void notify_inv(const Inv &inv);
+  void notify_inv(Connection *conn, const Inv &inv);
 
   // find a new addr and connect to it
   void connect_to_new_peer();
