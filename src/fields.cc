@@ -72,4 +72,12 @@ void BlockHeader::db_decode(const std::string &s) {
   dec.pull(height);
   assert(!dec.bytes_remaining());
 }
+
+uint32_t BlockHeader::age() const {
+  uint32_t now = time32();
+  if (now <= timestamp) {
+    return 0;
+  }
+  return now - timestamp;
+}
 }

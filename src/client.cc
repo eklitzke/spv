@@ -38,6 +38,7 @@ Client::Client(const std::string &datadir, std::shared_ptr<uvw::Loop> loop,
                size_t max_connections)
     : max_connections_(max_connections),
       shutdown_(false),
+      need_headers_(true),
       chain_(datadir),
       us_(rand64(), 0, PROTOCOL_VERSION, USER_AGENT),
       loop_(loop) {}
@@ -206,14 +207,14 @@ void Client::shutdown() {
 void Client::notify_connected(Connection *conn) {
   if (!hdr_timeout_) {
     log->info("starting header download");
-    update_chain_tip(conn);
+    sync_more_headers(conn);
   }
 }
 
 void Client::notify_peer(const NetAddr &addr) {
   auto pr = peers_.insert(addr);
   if (pr.second) {
-    log->info("added new peer {}", addr);
+    log->info("added new peer {}, peer list size {}", addr, peers_.size());
     if (connections_.size() < max_connections_ && !is_connected_to_addr(addr)) {
       connect_to_addr(addr.addr);
     }
@@ -227,11 +228,12 @@ void Client::notify_error(Connection *conn, const std::string &why) {
   remove_connection(conn);
 }
 
-void Client::update_chain_tip(Connection *conn) {
+void Client::sync_more_headers(Connection *conn) {
   if (conn == nullptr) {
     conn = random_connection();
     assert(conn != nullptr);
   }
+  auto peer = conn->peer();
   assert(!hdr_timeout_);
   hdr_timeout_ = loop_->resource<uvw::TimerHandle>();
   hdr_timeout_->once<uvw::ErrorEvent>([this](const auto &, auto &timer) {
@@ -239,11 +241,11 @@ void Client::update_chain_tip(Connection *conn) {
     hdr_timeout_.reset();
     timer.close();
   });
-  hdr_timeout_->on<uvw::TimerEvent>([this](const auto &, auto &timer) {
-    log->error("get headers timeout");
+  hdr_timeout_->on<uvw::TimerEvent>([this, peer](const auto &, auto &timer) {
+    log->warn("get headers timeout from peer {}", peer);
     timer.close();
     hdr_timeout_.reset();
-    update_chain_tip();
+    sync_more_headers();
   });
   hdr_timeout_->start(HEADER_TIMEOUT, NO_REPEAT);
   conn->get_headers(chain_.tip());
@@ -251,11 +253,18 @@ void Client::update_chain_tip(Connection *conn) {
 
 void Client::notify_headers(const std::vector<BlockHeader> &block_headers) {
   cancel_hdr_timeout();
+  if (block_headers.empty() && chain_.tip_is_recent()) {
+    log->info("header syncing finished, going into wait mode; tip is {}",
+              chain_.tip());
+    need_headers_ = false;
+    return;
+  }
+
   for (const auto &hdr : block_headers) {
     chain_.put_block_header(hdr);
   }
   chain_.save_tip();
-  update_chain_tip();
+  sync_more_headers();
 }
 
 Connection *Client::random_connection() {

@@ -59,6 +59,7 @@ class Client {
   std::unordered_map<Addr, std::unique_ptr<Connection> > connections_;
   Buffer read_buf_;
   bool shutdown_;
+  bool need_headers_;
   Chain chain_;
 
   std::shared_ptr<uvw::TimerHandle> hdr_timeout_;
@@ -110,7 +111,8 @@ class Client {
   // select a random connection
   Connection *random_connection();
 
-  void update_chain_tip(Connection *conn = nullptr);
+  // try to get more headers
+  void sync_more_headers(Connection *conn = nullptr);
 
   Addr select_peer() const;
 

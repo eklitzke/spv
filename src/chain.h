@@ -37,6 +37,11 @@ class Chain {
   // save the tip
   void save_tip();
 
+  // is the tip recent?
+  inline bool tip_is_recent(uint32_t seconds_cutoff = 3600) const {
+    return tip_.age() < seconds_cutoff;
+  }
+
   inline const BlockHeader &tip() const { return tip_; }
 
  private:

@@ -99,6 +99,9 @@ struct BlockHeader {
 
   // encode to db format
   std::string db_encode() const;
+
+  // get the age of this header, in seconds
+  uint32_t age() const;
 };
 
 struct VersionNetAddr {
