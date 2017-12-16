@@ -46,7 +46,9 @@ void Connection::connect() {
 }
 
 void Connection::read(const char* data, size_t sz) {
+#if 0
   log->debug("read {} bytes from peer {}", sz, peer_);
+#endif
   buf_.append(data, sz);
   for (bool ok = true; ok; ok = read_message())
     ;
@@ -124,6 +126,18 @@ void Connection::send_version() {
   ver.nonce = client_->us_.nonce;
   ver.user_agent = client_->us_.user_agent;
   send_msg(ver);
+
+  // expect a verack msg within 5 seconds
+  verack_ = client_->loop_->resource<uvw::TimerHandle>();
+  verack_->once<uvw::ErrorEvent>([](const auto&, auto& timer) {
+    log->error("got error from verack timer");
+    timer.close();
+  });
+  verack_->on<uvw::TimerEvent>([this](const auto&, auto& timer) {
+    client_->notify_error(this, "verack timeout");
+    timer.close();
+  });
+  verack_->start(std::chrono::seconds(5), std::chrono::seconds(0));
 }
 
 void Connection::get_headers(const std::vector<hash_t>& locator_hashes,
@@ -238,7 +252,10 @@ void Connection::handle_unknown(const std::string& cmd) {
 void Connection::handle_verack(VerAck* ack) {
   assert(state_ == ConnectionState::NEED_VERACK);
   state_ = ConnectionState::CONNECTED;
-  log->debug("ignoring verack message");
+  assert(verack_);
+  verack_->stop();
+  verack_->close();
+  verack_.reset();
 }
 
 void Connection::handle_version(Version* ver) {
@@ -251,9 +268,13 @@ void Connection::handle_version(Version* ver) {
   peer_.version = ver->version;
   peer_.time = now();
   log->info("finished handshake with peer {}", peer_);
-  send_msg(VerAck{});
+  send_msg(VerAck{});  // send required verack
 
-  // set up a ping timer; TODO: require pongs
+  // Ask for more peers. TODO: fall back on connecting to another seed peer if
+  // we get no response from this message.
+  send_msg(GetAddr{});
+
+  // set up a ping timer
   ping_ = client_->loop_->resource<uvw::TimerHandle>();
   ping_->once<uvw::ErrorEvent>([](const auto&, auto& timer) {
     log->error("got error from ping timer");

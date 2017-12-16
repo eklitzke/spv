@@ -69,11 +69,9 @@ int main(int argc, char** argv) {
   g("data-dir", "Path to the SPV database",
     cxxopts::value<std::string>()->default_value(".spv"));
   g("delete-data", "Delete the SPV data directory");
-  g("seed-connections", "Number of seed connections to make",
-    cxxopts::value<std::size_t>()->default_value("2"));
 
   std::string data_dir;
-  std::size_t connections, seed_connections;
+  std::size_t connections;
   try {
     auto args = options.parse(argc, argv);
     if (args.count("help")) {
@@ -91,7 +89,6 @@ int main(int argc, char** argv) {
       return 0;
     }
     connections = args["connections"].as<std::size_t>();
-    seed_connections = args["seed-connections"].as<std::size_t>();
     data_dir = args["data-dir"].as<std::string>();
   } catch (const cxxopts::option_not_exists_exception& exc) {
     std::cerr << exc.what() << "\n\n" << options.help();
@@ -99,7 +96,7 @@ int main(int argc, char** argv) {
   }
 
   auto loop = uvw::Loop::getDefault();
-  client.reset(new spv::Client(data_dir, loop, connections, seed_connections));
+  client.reset(new spv::Client(data_dir, loop, connections));
   install_shutdown(SIGINT);
   install_shutdown(SIGTERM);
   client->run();

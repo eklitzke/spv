@@ -330,8 +330,10 @@ static std::unique_ptr<Message> internal_decode_message(
   dec.pull(hdrs);
 
   size_t total_size = HEADER_SIZE + hdrs.payload_size;
+#if 0
   log->debug("pulled headers for command '{}', payload size {}, total_size {}",
              hdrs.command, hdrs.payload_size, total_size);
+#endif
   if (total_size > size) {
     std::ostringstream os;
     os << "payload for message '" << hdrs.command << "' not ready yet, we need "
@@ -341,8 +343,10 @@ static std::unique_ptr<Message> internal_decode_message(
 
   *bytes_consumed = total_size;
   dec.reset(data + HEADER_SIZE, hdrs.payload_size);
+#if 0
   log->debug("pulling {} byte payload for command '{}'", hdrs.payload_size,
              hdrs.command);
+#endif
 
   return registry_.parse(dec, hdrs);
 }
@@ -352,7 +356,9 @@ std::unique_ptr<Message> decode_message(const char *data, size_t size,
   try {
     return internal_decode_message(data, size, bytes_consumed);
   } catch (const IncompleteParse &exc) {
+#if 0
     log->debug("incomplete parse: {}", exc.what());
+#endif
   } catch (const UnknownMessage &exc) {
     log->warn("unhandled p2p message: '{}'", exc.what());
   } catch (const BadMessage &exc) {

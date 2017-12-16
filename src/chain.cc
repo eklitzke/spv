@@ -81,7 +81,7 @@ void Chain::update_database(const BlockHeader &hdr) {
 
   const std::string key = encode_key(hdr.block_hash);
   const std::string val = hdr.db_encode();
-  log->debug("writing {} bytes for genesis block", val.size());
+  log->debug("writing {} bytes for block {}", val.size(), hdr);
   auto s = db_->Put(write_opts, key, val);
   assert(s.ok());
 }
@@ -109,7 +109,6 @@ BlockHeader Chain::find_tip() {
 }
 
 void Chain::put_block_header(const BlockHeader &hdr, bool check_duplicate) {
-  log->debug("putting block header {}", hdr);
   std::string key = encode_key(hdr.block_hash);
 
   if (check_duplicate) {

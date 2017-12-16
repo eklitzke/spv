@@ -43,7 +43,7 @@ class Client {
 
  public:
   Client(const std::string &datadir, std::shared_ptr<uvw::Loop> loop,
-         size_t max_connections, size_t seed_connections);
+         size_t max_connections);
   Client() = delete;
   Client(const Client &other) = delete;
 
@@ -54,7 +54,6 @@ class Client {
 
  private:
   size_t max_connections_;
-  size_t max_seed_connections_;
   std::unordered_set<Addr> seed_peers_;
   std::unordered_set<NetAddr> peers_;
   std::unordered_map<Addr, std::unique_ptr<Connection> > connections_;
@@ -89,15 +88,21 @@ class Client {
   // Connections call this method to notify the client of a new peer.
   void notify_peer(const NetAddr &addr);
 
+  // notify that there was an error
+  void notify_error(Connection *conn, const std::string &why);
+
  private:
   // get peers from a dns seed
   void lookup_seed(const std::string &seed);
 
-  // try to keep connections full
-  void connect_to_peers();
+  // connect to a specific address
+  void connect_to_addr(const Addr &addr);
+  void connect_to_addr(const NetAddr &addr) {
+    return connect_to_addr(addr.addr);
+  }
 
-  // connect to a specific peer
-  void connect_to_peer(const Addr &addr);
+  // find a new addr and connect to it
+  void connect_to_new_peer();
 
   // enqueue connections
   void remove_connection(const Addr &addr);
@@ -106,5 +111,13 @@ class Client {
   Connection *random_connection();
 
   void update_chain_tip(Connection *conn = nullptr);
+
+  Addr select_peer() const;
+
+  // are we connected to this addr?
+  bool is_connected_to_addr(const Addr &addr) const;
+  bool is_connected_to_addr(const NetAddr &addr) const {
+    return is_connected_to_addr(addr.addr);
+  }
 };
 }  // namespace spv

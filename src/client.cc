@@ -35,9 +35,8 @@ static const std::vector<std::string> testSeeds = {
 };
 
 Client::Client(const std::string &datadir, std::shared_ptr<uvw::Loop> loop,
-               size_t max_connections, size_t seed_connections)
+               size_t max_connections)
     : max_connections_(max_connections),
-      max_seed_connections_(seed_connections),
       shutdown_(false),
       chain_(datadir),
       us_(rand64(), 0, PROTOCOL_VERSION, USER_AGENT),
@@ -57,56 +56,55 @@ void Client::lookup_seed(const std::string &seed) {
   });
   request->on<uvw::AddrInfoEvent>([=](const auto &event, auto &req) {
     for (const addrinfo *p = event.data.get(); p != nullptr; p = p->ai_next) {
-      Addr addr(p);
-      seed_peers_.insert(addr);
-      log->debug("added new peer {} (via seed {})", addr, seed);
+      seed_peers_.emplace(p);
     }
-    connect_to_peers();
+    connect_to_addr(select_peer());
     remove_dns_request(&req);
   });
   request->nodeAddrInfo(seed);
   dns_requests_.push_back(request);
 }
 
-void Client::connect_to_peers() {
-  if (shutdown_) {
-    log->debug("connect_to_peers(): skipping due to shutdown");
-    return;
-  } else if (connections_.size() >= max_connections_) {
-    log->debug("connect_to_peers(): connection list already full");
-    return;
+Addr Client::select_peer() const {
+  // list of peers we are already connected to
+  std::unordered_set<Addr> connections;
+  for (const auto &pr : connections_) {
+    connections.insert(pr.first);
   }
 
-  // prefer peers we got addr messages for
-  std::unordered_set<Addr> candidates;
-  for (const auto &p : peers_) {
-    candidates.insert(p.addr);
+  // first try to get a peer from the regular list
+  std::vector<Addr> peers;
+  for (const auto &peer : peers_) {
+    if (connections.find(peer.addr) == connections.end()) {
+      peers.push_back(peer.addr);
+    }
+  }
+  if (peers.size()) {
+    auto it = random_choice(peers.begin(), peers.end());
+    log->debug("select_peer() choosing peer {} from peers", *it);
+    return *it;
   }
 
-  // if no such peers are available, use the seed list
-  if (candidates.empty()) {
-    if (connections_.size() >= max_seed_connections_) {
-      log->debug("need an addr message to continue");
-      return;
-    }
-    for (const auto &p : seed_peers_) {
-      candidates.insert(p);
+  // otherwise use the seed peer list
+  for (const auto &peer : seed_peers_) {
+    if (connections.find(peer) == connections.end()) {
+      peers.push_back(peer);
     }
   }
-
-  std::vector<Addr> peers(seed_peers_.cbegin(), seed_peers_.cend());
-  shuffle(peers);
-  while (connections_.size() < max_seed_connections_ && !peers.empty()) {
-    auto it = peers.begin();
-    connect_to_peer(*it);
-    if (seed_peers_.erase(*it) != 1) {
-      log->error("failed to erase known peer {}", *it);
-    }
-    peers.erase(it);
-  }
+  assert(peers.size());
+  auto it = random_choice(peers.begin(), peers.end());
+  log->debug("select_peer() choosing peer {} from seed peers", *it);
+  return *it;
 }
 
-void Client::connect_to_peer(const Addr &addr) {
+bool Client::is_connected_to_addr(const Addr &addr) const {
+  for (const auto &pr : connections_) {
+    if (pr.first == addr) return true;
+  }
+  return false;
+}
+
+void Client::connect_to_addr(const Addr &addr) {
   log->debug("connecting to peer {}", addr);
 
   Connection *conn = new Connection(this, addr);
@@ -135,7 +133,7 @@ void Client::connect_to_peer(const Addr &addr) {
   conn->tcp_->once<uvw::CloseEvent>([=](const auto &, auto &tcp) {
     log->info("close event for connection {}", addr);
     cancel_timer();
-    connect_to_peers();
+    connect_to_new_peer();
   });
   conn->tcp_->once<uvw::ConnectEvent>([=](const auto &, auto &) {
     log->info("connected to new peer {}", addr);
@@ -157,6 +155,12 @@ void Client::connect_to_peer(const Addr &addr) {
     timer.close();
   });
   timer->start(std::chrono::seconds(1), NO_REPEAT);
+}
+
+void Client::connect_to_new_peer() {
+  if (!shutdown_) {
+    connect_to_addr(select_peer());
+  }
 }
 
 void Client::remove_connection(const Addr &addr) {
@@ -194,9 +198,17 @@ void Client::notify_peer(const NetAddr &addr) {
   auto pr = peers_.insert(addr);
   if (pr.second) {
     log->info("added new peer {}", addr);
+    if (connections_.size() < max_connections_ && !is_connected_to_addr(addr)) {
+      connect_to_addr(addr.addr);
+    }
   } else {
     log->debug("ignoring duplicate peer {}", addr);
   }
+}
+
+void Client::notify_error(Connection *conn, const std::string &why) {
+  log->warn("error on connection to {}, reason: {}", conn->peer(), why);
+  remove_connection(conn->peer().addr);
 }
 
 void Client::update_chain_tip(Connection *conn) {

@@ -59,7 +59,7 @@ class Connection {
   // read data
   void read(const char* data, size_t sz);
 
-  void send_version();
+  void _version();
 
   inline bool connected() const { return state_ == ConnectionState::CONNECTED; }
 
@@ -80,12 +80,14 @@ class Connection {
   void get_headers(const std::vector<hash_t>& locator_hashes,
                    const hash_t& hash_stop = empty_hash);
   void get_headers(const BlockHeader& start_hdr);
+  void send_version();
 
  private:
   // heartbeat information
   uint64_t ping_nonce_;
   std::shared_ptr<uvw::TimerHandle> ping_;
   std::shared_ptr<uvw::TimerHandle> pong_;
+  std::shared_ptr<uvw::TimerHandle> verack_;
 
   // returns true if a message was actually read
   bool read_message();
