@@ -170,7 +170,9 @@ void Client::remove_connection(const Addr &addr) {
     log->warn("connection {} was already removed", addr);
     return;
   }
-  it->second->tcp_->close();
+  if (!it->second->tcp_->closing()) {
+    it->second->tcp_->close();
+  }
   connections_.erase(it);
 }
 

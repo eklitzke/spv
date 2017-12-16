@@ -27,11 +27,17 @@ MODULE_LOGGER
 
 const static std::chrono::seconds ping_interval(60);
 
+inline void toggle_on(bool& value) {
+  assert(!value);
+  value = true;
+}
+
 Connection::Connection(Client* client, const Addr& addr)
     : loop_(client->loop_),
       client_(client),
       peer_(addr),
-      state_(ConnectionState::NEED_VERSION),
+      have_version_(false),
+      have_verack_(false),
       tcp_(client->loop_->resource<uvw::TcpHandle>()),
       ping_nonce_(0) {
   assert(!addr.ip().empty() && addr.port());
@@ -74,7 +80,7 @@ bool Connection::read_message() {
     log->debug("message '{}' from peer {}", cmd, peer_);
 
     if (cmd != "version" && cmd != "verack") {
-      assert(state_ == ConnectionState::CONNECTED);
+      assert(connected());
     }
 
     if (cmd == "addr") {
@@ -180,8 +186,17 @@ void Connection::shutdown() {
 }
 
 void Connection::handle_addr(AddrMsg* addrs) {
+  bool new_peers = false;
   for (const auto& addr : addrs->addrs) {
     client_->notify_peer(addr);
+    if (addr.addr != peer_.addr) {
+      new_peers = true;
+    }
+  }
+  if (new_peers && get_addr_) {
+    get_addr_->stop();
+    get_addr_->close();
+    get_addr_.reset();
   }
 }
 void Connection::handle_getaddr(GetAddr* addr) {
@@ -250,8 +265,7 @@ void Connection::handle_unknown(const std::string& cmd) {
 }
 
 void Connection::handle_verack(VerAck* ack) {
-  assert(state_ == ConnectionState::NEED_VERACK);
-  state_ = ConnectionState::CONNECTED;
+  toggle_on(have_verack_);
   assert(verack_);
   verack_->stop();
   verack_->close();
@@ -259,8 +273,7 @@ void Connection::handle_verack(VerAck* ack) {
 }
 
 void Connection::handle_version(Version* ver) {
-  assert(state_ == ConnectionState::NEED_VERSION);
-  state_ = ConnectionState::NEED_VERACK;
+  toggle_on(have_version_);
 
   peer_.nonce = ver->nonce;
   peer_.services = ver->services;
@@ -269,10 +282,7 @@ void Connection::handle_version(Version* ver) {
   peer_.time = now();
   log->info("finished handshake with peer {}", peer_);
   send_msg(VerAck{});  // send required verack
-
-  // Ask for more peers. TODO: fall back on connecting to another seed peer if
-  // we get no response from this message.
-  send_msg(GetAddr{});
+  get_new_addrs();     // ask for more peers
 
   // set up a ping timer
   ping_ = client_->loop_->resource<uvw::TimerHandle>();
@@ -302,6 +312,24 @@ void Connection::handle_version(Version* ver) {
 
   // tell the client that we're ready to fetch headers
   client_->notify_connected(this);
+}
+
+void Connection::get_new_addrs() {
+  assert(!get_addr_);
+  get_addr_ = client_->loop_->resource<uvw::TimerHandle>();
+  get_addr_->once<uvw::ErrorEvent>([](const auto&, auto& timer) {
+    log->error("got error from get_addr timer");
+    timer.close();
+  });
+  get_addr_->on<uvw::TimerEvent>([this](const auto&, auto& timer) {
+    log->info(
+        "peer {} failed to respond to get_addr, asking client to connect to "
+        "new seed peer",
+        peer_);
+    client_->connect_to_new_peer();
+    timer.close();
+  });
+  get_addr_->start(std::chrono::seconds(5), std::chrono::seconds(0));
 }
 
 }  // namespace spv

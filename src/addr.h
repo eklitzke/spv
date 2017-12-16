@@ -21,7 +21,6 @@
 #include <sys/types.h>
 
 #include <array>
-#include <chrono>
 #include <cstring>
 
 namespace spv {
@@ -56,6 +55,7 @@ class Addr {
   inline bool operator==(const Addr& other) const {
     return af_ == other.af_ && port_ == other.port_ && ip_ == other.ip_;
   }
+  inline bool operator!=(const Addr& other) const { return !operator==(other); }
 
  private:
   int af_;  // address family: AF_INET or AF_INET6

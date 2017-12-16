@@ -35,12 +35,6 @@ class Addr;
 
 namespace spv {
 
-enum class ConnectionState {
-  NEED_VERSION = 1,
-  NEED_VERACK = 2,
-  CONNECTED = 3,
-};
-
 class Client;
 class Connection {
   friend Client;
@@ -61,14 +55,16 @@ class Connection {
 
   void _version();
 
-  inline bool connected() const { return state_ == ConnectionState::CONNECTED; }
+  inline bool connected() const { return have_version_ && have_verack_; }
 
  private:
   std::shared_ptr<uvw::Loop> loop_;
   Client* client_;
   Buffer buf_;
   Peer peer_;
-  ConnectionState state_;
+
+  bool have_version_;
+  bool have_verack_;
 
  protected:
   std::shared_ptr<uvw::TcpHandle> tcp_;
@@ -88,6 +84,7 @@ class Connection {
   std::shared_ptr<uvw::TimerHandle> ping_;
   std::shared_ptr<uvw::TimerHandle> pong_;
   std::shared_ptr<uvw::TimerHandle> verack_;
+  std::shared_ptr<uvw::TimerHandle> get_addr_;
 
   // returns true if a message was actually read
   bool read_message();
@@ -109,5 +106,7 @@ class Connection {
   void handle_unknown(const std::string& msg);
   void handle_verack(VerAck* ack);
   void handle_version(Version* ver);
+
+  void get_new_addrs();
 };
 }  // namespace spv

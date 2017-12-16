@@ -91,6 +91,9 @@ class Client {
   // notify that there was an error
   void notify_error(Connection *conn, const std::string &why);
 
+  // find a new addr and connect to it
+  void connect_to_new_peer();
+
  private:
   // get peers from a dns seed
   void lookup_seed(const std::string &seed);
@@ -100,9 +103,6 @@ class Client {
   void connect_to_addr(const NetAddr &addr) {
     return connect_to_addr(addr.addr);
   }
-
-  // find a new addr and connect to it
-  void connect_to_new_peer();
 
   // enqueue connections
   void remove_connection(const Addr &addr);
