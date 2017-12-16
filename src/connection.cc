@@ -79,8 +79,13 @@ bool Connection::read_message() {
     const std::string& cmd = msg->headers.command;
     log->debug("message '{}' from peer {}", cmd, peer_);
 
-    if (cmd != "version" && cmd != "verack") {
-      assert(connected());
+    if (cmd != "version" && cmd != "verack" && !connected()) {
+      log->error(
+          "unexpectedly received message '{}' from peer {} in unconnected "
+          "state, have_version = {}, have_verack = {}",
+          cmd, peer_, have_version_, have_verack_);
+      client_->notify_error(this, "protocol error");
+      return ret;
     }
 
     if (cmd == "addr") {
