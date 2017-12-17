@@ -301,8 +301,9 @@ void Connection::handle_version(Version* ver) {
   peer_.time = now();
   log->info("finished handshake with peer {}, blocks={}", peer_,
             ver->start_height);
-  send_msg(VerAck{});  // send required verack
-  get_new_addrs();     // ask for more peers
+  send_msg(VerAck{});       // send required verack
+  send_msg(SendHeaders{});  // request new headers
+  get_new_addrs();          // ask for more peers
 
   // set up a ping timer
   ping_ = client_->loop_->resource<uvw::TimerHandle>();
