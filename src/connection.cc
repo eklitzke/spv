@@ -141,6 +141,7 @@ void Connection::send_version() {
   ver.addr_recv.addr = peer_.addr;
   ver.nonce = client_->us_.nonce;
   ver.user_agent = client_->us_.user_agent;
+  ver.start_height = client_->get_height();
   send_msg(ver);
 
   // expect a verack msg within 5 seconds
@@ -170,6 +171,12 @@ void Connection::get_headers(const BlockHeader& start_hdr) {
             start_hdr);
   std::vector<hash_t> needed{start_hdr.block_hash};
   return get_headers(needed);
+}
+
+void Connection::get_data(const Inv& inv) {
+  GetData req;
+  req.invs.push_back(inv);
+  send_msg(req);
 }
 
 void Connection::shutdown() {
@@ -253,7 +260,6 @@ void Connection::handle_pong(Pong* pong) {
           peer_, pong->nonce, ping_nonce_);
       shutdown();
     } else {
-      log->debug("peer {} sent us correct pong nonce", peer_);
       pong_->close();
     }
     pong_.reset();
@@ -293,7 +299,8 @@ void Connection::handle_version(Version* ver) {
   peer_.user_agent = ver->user_agent;
   peer_.version = ver->version;
   peer_.time = now();
-  log->info("finished handshake with peer {}", peer_);
+  log->info("finished handshake with peer {}, blocks={}", peer_,
+            ver->start_height);
   send_msg(VerAck{});  // send required verack
   get_new_addrs();     // ask for more peers
 
@@ -306,8 +313,6 @@ void Connection::handle_version(Version* ver) {
   ping_->on<uvw::TimerEvent>([this](const auto&, auto&) {
     Ping ping;
     ping.nonce = ping_nonce_ = rand64();
-    log->debug("ping timer fired for peer {}, using nonce {}", peer_,
-               ping_nonce_);
     send_msg(ping);
 
     pong_ = client_->loop_->resource<uvw::TimerHandle>();
@@ -316,7 +321,7 @@ void Connection::handle_version(Version* ver) {
       pong_->close();
     });
     pong_->on<uvw::TimerEvent>([this](const auto&, auto&) {
-      log->warn("peer did not send up pong in time");
+      log->warn("peer {} did not send pong in time", peer_);
       shutdown();
     });
     pong_->start(std::chrono::seconds(5), std::chrono::seconds(0));

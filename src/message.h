@@ -83,6 +83,14 @@ struct GetBlocks : Message {
   FINAL_ENCODE
 };
 
+struct GetData : Message {
+  std::vector<Inv> invs;
+
+  GetData() : GetData(Headers("getdata")) {}
+  explicit GetData(const Headers &hdrs) : Message(hdrs) {}
+  FINAL_ENCODE
+};
+
 struct GetHeaders : Message {
   uint32_t version;
   std::vector<hash_t> locator_hashes;

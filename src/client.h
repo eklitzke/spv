@@ -100,6 +100,9 @@ class Client {
   // find a new addr and connect to it
   void connect_to_new_peer();
 
+  // get the current block height
+  size_t get_height() const;
+
  private:
   // get peers from a dns seed
   void lookup_seed(const std::string &seed);

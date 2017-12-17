@@ -163,6 +163,8 @@ void Client::connect_to_new_peer() {
   }
 }
 
+size_t Client::get_height() const { return chain_.height(); }
+
 void Client::remove_connection(Connection *conn) {
   const Addr &addr = conn->peer().addr;
   log->warn("removing connection to {}", conn->peer());
@@ -260,14 +262,29 @@ void Client::notify_headers(const std::vector<BlockHeader> &block_headers) {
 
   for (const auto &hdr : block_headers) {
     chain_.put_block_header(hdr);
+
+    Inv inv(InvType::BLOCK, hdr.block_hash);
+    auto pos = pending_inv_.find(inv);
+    if (pos != pending_inv_.end()) {
+      log->debug("de-queueing inv");
+      pending_inv_.erase(pos);
+    }
   }
   chain_.save_tip();
   sync_more_headers();
 }
 
 void Client::notify_inv(Connection *conn, const Inv &inv) {
-  log->warn("inv from peer {} with type {}, hash {}", conn->peer(),
-            to_string(inv.type), to_hex(inv.hash));
+  log->warn("got new inv {} {}", to_string(inv.type), to_hex(inv.hash));
+  auto it = pending_inv_.find(inv);
+  if (it == pending_inv_.end()) {
+    log->debug("got duplicate inv from peer {}", conn->peer());
+    return;
+  }
+  // TODO: also check database
+  pending_inv_.insert(inv);
+  log->debug("added inv, pending list = {}", pending_inv_.size());
+  conn->get_data(inv);
 }
 
 Connection *Client::random_connection() {

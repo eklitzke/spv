@@ -44,6 +44,8 @@ class Chain {
 
   inline const BlockHeader &tip() const { return tip_; }
 
+  inline size_t height() const { return tip_.height; }
+
  private:
   // N.B. There's a lot of RocksDB stuff in valgrind when code shuts down via a
   // signal handler. This should be a raw pointer because RocksDB somehow

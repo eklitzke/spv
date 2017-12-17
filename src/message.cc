@@ -63,6 +63,16 @@ DECLARE_ENCODE(GetBlocks) {
   return enc.serialize(sz);
 }
 
+DECLARE_ENCODE(GetData) {
+  Encoder enc(headers);
+  enc.push_varint(invs.size());
+  for (const auto &inv : invs) {
+    enc.push(inv.type);
+    enc.push(inv.hash);
+  }
+  return enc.serialize(sz);
+}
+
 DECLARE_ENCODE(GetHeaders) {
   Encoder enc(headers);
   enc.push(version);
@@ -213,6 +223,25 @@ DECLARE_PARSER(getblocks, [](auto &dec, const auto &hdrs) {
     msg->locator_hashes.push_back(locator_hash);
   }
   dec.pull(msg->hash_stop);
+  return msg;
+});
+
+DECLARE_PARSER(getdata, [](auto &dec, const auto &hdrs) {
+  auto msg = std::make_unique<GetData>(hdrs);
+  uint64_t count;
+  dec.pull_varint(count);
+  if (count > 50000) {
+    std::ostringstream os;
+    os << "getdata inv count " << count << " is too large, ignoring";
+    throw BadMessage(os.str());
+  }
+  for (size_t i = 0; i < count; i++) {
+    InvType type;
+    hash_t hash;
+    dec.pull(type);
+    dec.pull(hash);
+    msg->invs.emplace_back(type, hash);
+  }
   return msg;
 });
 

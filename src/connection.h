@@ -76,6 +76,7 @@ class Connection {
   void get_headers(const std::vector<hash_t>& locator_hashes,
                    const hash_t& hash_stop = empty_hash);
   void get_headers(const BlockHeader& start_hdr);
+  void get_data(const Inv& inv);
   void send_version();
 
  private:

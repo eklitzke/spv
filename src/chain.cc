@@ -63,7 +63,7 @@ Chain::Chain(const std::string &datadir) {
   auto status = rocksdb::DB::Open(dbopts, datadir, &db_);
   if (status.ok()) {
     tip_ = find_tip();
-    log->info("initialized with at {}", tip_);
+    log->info("initialized chain with tip {}", tip_);
     return;
   }
 
