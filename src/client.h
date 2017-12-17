@@ -76,6 +76,8 @@ class Client {
   // mark this request as completed
   void remove_dns_request(uvw::GetAddrInfoReq *req);
 
+  bool need_inv(const Inv &inv) const;
+
  protected:
   Peer us_;
   std::shared_ptr<uvw::Loop> loop_;

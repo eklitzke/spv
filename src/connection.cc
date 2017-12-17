@@ -167,8 +167,8 @@ void Connection::get_headers(const std::vector<hash_t>& locator_hashes,
 }
 
 void Connection::get_headers(const BlockHeader& start_hdr) {
-  log->info("fetching headers from peer {} starting at block {}", peer_,
-            start_hdr);
+  log->debug("fetching headers from peer {} starting at block {}", peer_,
+             start_hdr);
   std::vector<hash_t> needed{start_hdr.block_hash};
   return get_headers(needed);
 }

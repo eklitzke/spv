@@ -26,8 +26,8 @@
 namespace spv {
 MODULE_LOGGER
 
-static const rocksdb::ReadOptions read_opts;
-static const rocksdb::WriteOptions write_opts;
+rocksdb::ReadOptions read_opts;
+rocksdb::WriteOptions write_opts;
 
 static const std::string tip_key = "tip";
 
@@ -52,16 +52,13 @@ inline void check_checkpoint(const BlockHeader &hdr) {
   }
 }
 
-inline std::string encode_key(hash_t block_hash) {
-  std::reverse(block_hash.begin(), block_hash.end());  // n.b. by value
-  return {reinterpret_cast<const char *>(block_hash.data()), sizeof(hash_t)};
-}
-
-Chain::Chain(const std::string &datadir) {
+Chain::Chain(const std::string &datadir)
+    : hdr_view_('h'), orphan_view_('o'), height_view_('y') {
   rocksdb::Options dbopts;
   dbopts.OptimizeForSmallDb();
   auto status = rocksdb::DB::Open(dbopts, datadir, &db_);
   if (status.ok()) {
+    initialize_views();
     tip_ = find_tip();
     log->info("initialized chain with tip {}", tip_);
     return;
@@ -71,70 +68,105 @@ Chain::Chain(const std::string &datadir) {
   dbopts.error_if_exists = true;
   status = rocksdb::DB::Open(dbopts, datadir, &db_);
   assert(status.ok());
-  update_database(BlockHeader::genesis());
+  initialize_views();
+  add_genesis_block();
 }
 
-void Chain::update_database(const BlockHeader &hdr) {
-  if (!tip_.height || hdr.height > tip_.height) {
-    tip_ = hdr;
-  }
-
-  const std::string key = encode_key(hdr.block_hash);
-  const std::string val = hdr.db_encode();
-#if 0
-  log->debug("writing {} bytes for block {}", val.size(), hdr);
-#endif
-  auto s = db_->Put(write_opts, key, val);
-  assert(s.ok());
+void Chain::add_genesis_block() {
+  // TODO: use a transaction
+  tip_ = BlockHeader::genesis();
+  assert(hdr_view_.put(tip_.block_hash, tip_.db_encode()));
+  assert(height_view_.put(0, tip_.block_hash));
+  save_tip();
 }
 
-rocksdb::Status Chain::find_block_header(BlockHeader &hdr) {
-  const std::string key = encode_key(hdr.block_hash);
-  std::string val;
-  auto s = db_->Get(read_opts, key, &val);
-  if (!s.ok()) {
-    return s;
-  }
-  assert(val.size());
-  hdr.db_decode(val);
-  return s;
+BlockHeader Chain::find(const hash_t &hash) const {
+  bool found = false;
+  const std::string data = hdr_view_.find(hash, found);
+  assert(found);
+
+  BlockHeader hdr;
+  hdr.db_decode(data);
+  return hdr;
 }
 
 BlockHeader Chain::find_tip() {
   std::string val;
   auto s = db_->Get(read_opts, tip_key, &val);
+  if (!s.ok()) {
+    log->warn("no tip...");
+    add_genesis_block();
+    s = db_->Get(read_opts, tip_key, &val);
+  }
   assert(s.ok());
-
-  BlockHeader hdr;
-  hdr.db_decode(val);
-  return hdr;
+  const hash_t tip_hash = decode_hash(val);
+  log->debug("fetching tip whose hash is {}", tip_hash);
+  return find(tip_hash);
 }
 
 void Chain::put_block_header(const BlockHeader &hdr, bool check_duplicate) {
-  std::string key = encode_key(hdr.block_hash);
-
-  if (check_duplicate) {
-    std::string value;
-    auto s = db_->Get(read_opts, key, &value);
-    if (s.ok()) {
-      log->warn("ignoring duplicate header {}", hdr);
+  assert(hdr.block_hash != empty_hash);
+  bool found = false;
+  std::string prev_block_data = hdr_view_.find(hdr.prev_block, found);
+  if (found) {
+    BlockHeader prev_block;
+    prev_block.db_decode(prev_block_data);
+    if (prev_block.is_genesis() || prev_block.height) {
+      // insert the block with the correct block height
+      BlockHeader copy(hdr);
+      copy.height = prev_block.height + 1;
+      check_checkpoint(copy);
+      assert(hdr_view_.put(copy.block_hash, copy.db_encode()));
+      assert(height_view_.put(copy.height, copy.block_hash));
+      attach_orphan(copy);
+      if (copy.height > tip_.height) {
+        tip_ = copy;
+      }
       return;
     }
   }
 
-  BlockHeader prev_block;
-  prev_block.block_hash = hdr.prev_block;
-  auto s = find_block_header(prev_block);
-  assert(s.ok());
+  // This is an orphan block; either the ancestor doesn't exist, or the ancestor
+  // is an orphan. This is indexed based on the orphan's prev_block;
+  assert(orphan_view_.put(hdr.prev_block, hdr.db_encode()));
+  log->debug("added orphan block {}", hdr);
+}
 
-  BlockHeader copy(hdr);
-  copy.height = prev_block.height + 1;
-  update_database(copy);
-  check_checkpoint(copy);
+bool Chain::attach_orphan(const BlockHeader &hdr) {
+  assert(hdr.height || hdr.is_genesis());
+
+  bool found = false;
+  const std::string data = orphan_view_.find(hdr.block_hash, found);
+  if (!found) {
+    return false;
+  }
+
+  BlockHeader orphan;
+  orphan.db_decode(data);
+  assert(orphan.height == 0);
+  assert(orphan.prev_block == hdr.block_hash);
+  orphan.height = hdr.height + 1;
+
+  // TODO: Use a tx for this.
+  // TODO: Handle the case where multiple block have the same height.
+  assert(hdr_view_.put(orphan.block_hash, orphan.db_encode()));
+  assert(height_view_.put(orphan.height, orphan.block_hash));
+  assert(orphan_view_.erase(hdr.block_hash));
+  log->warn("attached orphan {}", orphan);
+
+  if (orphan.height > tip_.height) {
+    tip_ = orphan;
+  }
+
+  // look for orphans recursively
+  attach_orphan(orphan);
+  return true;
 }
 
 void Chain::save_tip() {
-  auto s = db_->Put(write_opts, tip_key, tip_.db_encode());
+  assert(tip_.block_hash != empty_hash);
+  auto s = db_->Put(write_opts, tip_key, encode_hash(tip_.block_hash));
   assert(s.ok());
+  log->info("new chain tip {}", tip_);
 }
 }  // namespace spv

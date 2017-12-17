@@ -22,6 +22,92 @@
 
 namespace spv {
 class Client;
+class Chain;
+
+extern rocksdb::ReadOptions read_opts;
+extern rocksdb::WriteOptions write_opts;
+
+inline std::string encode_hash(hash_t hash) {  // by value
+  std::reverse(hash.begin(), hash.end());
+  return {reinterpret_cast<const char *>(hash.data()), sizeof(hash_t)};
+}
+
+inline hash_t decode_hash(const std::string &val) {
+  assert(val.size() == sizeof(hash_t));
+  hash_t out;
+  std::memmove(out.data(), val.data(), sizeof(hash_t));
+  std::reverse(out.begin(), out.end());
+  return out;
+}
+
+class TableView {
+  friend class Chain;
+
+ public:
+  TableView() = delete;
+  explicit TableView(char prefix) : db_(nullptr), prefix_(prefix) {}
+  TableView(rocksdb::DB *db, char prefix) : db_(db), prefix_(prefix) {}
+
+  inline bool has_key(const hash_t &hash) const {
+    std::string val;
+    auto s = db_->Get(read_opts, encode_key(hash), &val);
+    return s.ok();
+  }
+
+  inline std::string find(const std::string &key, bool &found) const {
+    std::string val;
+    auto s = db_->Get(read_opts, key, &val);
+    found = s.ok();
+    return val;
+  }
+
+  inline std::string find(size_t height, bool &found) const {
+    return find(encode_key(height), found);
+  }
+
+  inline std::string find(const hash_t &hash, bool &found) const {
+    return find(encode_key(hash), found);
+  }
+
+  inline bool erase(const hash_t &hash) {
+    auto s = db_->Delete(write_opts, encode_key(hash));
+    return s.ok();
+  }
+
+  inline bool put(const std::string &key, const std::string &val) {
+    auto s = db_->Put(write_opts, key, val);
+    return s.ok();
+  }
+
+  inline bool put(const hash_t &hash, const std::string &data) {
+    assert(hash != empty_hash);
+    return put(encode_key(hash), data);
+  }
+
+  inline bool put(size_t height, const hash_t &hash) {
+    return put(encode_key(height), encode_key(hash));
+  }
+
+ private:
+  rocksdb::DB *db_;
+  char prefix_;
+
+  inline std::string encode_key(const hash_t &hash) const {
+    return prefix_ + encode_hash(hash);
+  }
+
+  inline std::string encode_key(size_t height) const {
+    std::ostringstream os;
+    os << prefix_ << height;
+    return os.str();
+  }
+
+ protected:
+  void set_db(rocksdb::DB *db) {
+    assert(db_ == nullptr);
+    db_ = db;
+  }
+};
 
 class Chain {
   friend Client;
@@ -46,6 +132,12 @@ class Chain {
 
   inline size_t height() const { return tip_.height; }
 
+  inline bool has_block(const hash_t &hash) const {
+    return hdr_view_.has_key(hash) || orphan_view_.has_key(hash);
+  }
+
+  BlockHeader find(const hash_t &hash) const;
+
  private:
   // N.B. There's a lot of RocksDB stuff in valgrind when code shuts down via a
   // signal handler. This should be a raw pointer because RocksDB somehow
@@ -54,10 +146,27 @@ class Chain {
   rocksdb::DB *db_;
   BlockHeader tip_;
 
-  void update_database(const BlockHeader &hdr);
+  // TODO: this could benefit from some caching. We probably want to cache the
+  // last N non-orphan headers (where N could be pretty small, possibly even
+  // just 1) and probably all of the orphans.
+  TableView hdr_view_;
+  TableView orphan_view_;
+  TableView height_view_;
 
-  rocksdb::Status find_block_header(BlockHeader &hdr);
+  void add_genesis_block();
+
+  // Get the block at the tip.
   BlockHeader find_tip();
+
+  // If there is an orphan of this header, attach it.
+  bool attach_orphan(const BlockHeader &hdr);
+
+  inline void initialize_views() {
+    assert(db_ != nullptr);
+    hdr_view_.set_db(db_);
+    orphan_view_.set_db(db_);
+    height_view_.set_db(db_);
+  }
 
  protected:
   Chain(const std::string &datadir);

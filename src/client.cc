@@ -274,17 +274,23 @@ void Client::notify_headers(const std::vector<BlockHeader> &block_headers) {
   sync_more_headers();
 }
 
-void Client::notify_inv(Connection *conn, const Inv &inv) {
-  log->warn("got new inv {} {}", to_string(inv.type), to_hex(inv.hash));
-  auto it = pending_inv_.find(inv);
-  if (it == pending_inv_.end()) {
-    log->debug("got duplicate inv from peer {}", conn->peer());
-    return;
+bool Client::need_inv(const Inv &inv) const {
+  // are we already trying to get this block?
+  if (pending_inv_.find(inv) != pending_inv_.end()) {
+    return false;
   }
-  // TODO: also check database
-  pending_inv_.insert(inv);
-  log->debug("added inv, pending list = {}", pending_inv_.size());
-  conn->get_data(inv);
+  return !chain_.has_block(inv.hash);
+}
+
+void Client::notify_inv(Connection *conn, const Inv &inv) {
+  if (need_inv(inv)) {
+    log->warn("fetching new inv {} {}", to_string(inv.type), to_hex(inv.hash));
+    pending_inv_.insert(inv);
+    log->debug("added inv, pending list = {}", pending_inv_.size());
+    conn->get_data(inv);
+  } else {
+    log->debug("skipping duplicate inv");
+  }
 }
 
 Connection *Client::random_connection() {
