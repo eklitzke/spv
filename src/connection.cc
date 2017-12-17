@@ -104,7 +104,7 @@ bool Connection::read_message() {
     } else if (cmd == "headers") {
       handle_headers(dynamic_cast<HeadersMsg*>(msg.get()));
     } else if (cmd == "inv") {
-      handle_inv(dynamic_cast<Inv*>(msg.get()));
+      handle_inv(dynamic_cast<InvMsg*>(msg.get()));
     } else if (cmd == "mempool") {
       handle_mempool(dynamic_cast<Mempool*>(msg.get()));
     } else if (cmd == "ping") {
@@ -232,9 +232,9 @@ void Connection::handle_mempool(Mempool* pool) {
   log->debug("ignoring mempool message");
 }
 
-void Connection::handle_inv(Inv* inv) {
-  for (const auto& pr : inv->invs) {
-    client_->notify_inv(this, pr.first, pr.second);
+void Connection::handle_inv(InvMsg* inv) {
+  for (const auto& inv : inv->invs) {
+    client_->notify_inv(this, inv);
   }
 }
 

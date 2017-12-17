@@ -265,9 +265,9 @@ void Client::notify_headers(const std::vector<BlockHeader> &block_headers) {
   sync_more_headers();
 }
 
-void Client::notify_inv(Connection *conn, InvType type, const hash_t &hash) {
+void Client::notify_inv(Connection *conn, const Inv &inv) {
   log->warn("inv from peer {} with type {}, hash {}", conn->peer(),
-            to_string(type), to_hex(hash));
+            to_string(inv.type), to_hex(inv.hash));
 }
 
 Connection *Client::random_connection() {

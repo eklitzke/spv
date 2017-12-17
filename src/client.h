@@ -57,6 +57,7 @@ class Client {
   std::unordered_set<Addr> seed_peers_;
   std::unordered_set<NetAddr> peers_;
   std::unordered_map<Addr, std::unique_ptr<Connection> > connections_;
+  std::unordered_set<Inv> pending_inv_;
   Buffer read_buf_;
   bool shutdown_;
   bool need_headers_;
@@ -94,7 +95,7 @@ class Client {
   void notify_error(Connection *conn, const std::string &why);
 
   // notify of a new inv message
-  void notify_inv(Connection *conn, InvType type, const hash_t &hash);
+  void notify_inv(Connection *conn, const Inv &inv);
 
   // find a new addr and connect to it
   void connect_to_new_peer();

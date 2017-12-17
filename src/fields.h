@@ -75,6 +75,18 @@ inline std::string to_string(const InvType &inv) {
   return os.str();
 }
 
+struct Inv {
+  InvType type;
+  hash_t hash;
+
+  Inv() : type(InvType::ERROR), hash(empty_hash) {}
+  Inv(InvType t, const hash_t &h) : type(t), hash(h) {}
+
+  bool operator==(const Inv &other) const {
+    return type == other.type && hash == other.hash;
+  }
+};
+
 struct Headers {
   uint32_t magic;
   std::string command;
@@ -166,6 +178,15 @@ template <>
 struct hash<spv::NetAddr> {
   std::size_t operator()(const spv::NetAddr &addr) const noexcept {
     return std::hash<spv::Addr>{}(addr.addr);
+  }
+};
+
+template <>
+struct hash<spv::Inv> {
+  std::size_t operator()(const spv::Inv &inv) const noexcept {
+    size_t h1 = std::hash<uint32_t>{}(static_cast<uint32_t>(inv.type));
+    size_t h2 = std::hash<spv::hash_t>{}(inv.hash);
+    return h1 ^ h2;
   }
 };
 }  // namespace std

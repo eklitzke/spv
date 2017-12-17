@@ -97,7 +97,7 @@ class Connection {
   void handle_getblocks(GetBlocks* getblocks);
   void handle_getheaders(GetHeaders* getheaders);
   void handle_headers(HeadersMsg* headers);
-  void handle_inv(Inv* inv);
+  void handle_inv(InvMsg* inv);
   void handle_mempool(Mempool* pool);
   void handle_ping(Ping* ping);
   void handle_pong(Pong* pong);
