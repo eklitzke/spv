@@ -17,6 +17,7 @@
 #pragma once
 
 #include <rocksdb/db.h>
+#include <rocksdb/utilities/optimistic_transaction_db.h>
 
 #include "./fields.h"
 
@@ -115,13 +116,13 @@ class Chain {
  public:
   Chain() = delete;
   Chain(const Chain &other) = delete;
-  ~Chain() { save_tip(); }
+  ~Chain() { save_tip(true); }
 
   // add a block header
   void put_block_header(const BlockHeader &hdr, bool check_duplicate = true);
 
   // save the tip
-  void save_tip();
+  bool save_tip(bool check = true);
 
   // is the tip recent?
   inline bool tip_is_recent(uint32_t seconds_cutoff = 3600) const {
@@ -144,6 +145,9 @@ class Chain {
   // atuomatically deletes any open DB handles, but the code here needs to be
   // cleaned up to clearnly pass valgrind.
   rocksdb::DB *db_;
+  rocksdb::Transaction *tx_;
+
+  // The tip of the blockchain
   BlockHeader tip_;
 
   // TODO: this could benefit from some caching. We probably want to cache the
@@ -160,6 +164,9 @@ class Chain {
 
   // If there is an orphan of this header, attach it.
   bool attach_orphan(const BlockHeader &hdr);
+
+  // Try to update the tip.
+  void update_tip(const BlockHeader &hdr);
 
   inline void initialize_views() {
     assert(db_ != nullptr);

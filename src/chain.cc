@@ -119,9 +119,7 @@ void Chain::put_block_header(const BlockHeader &hdr, bool check_duplicate) {
       assert(hdr_view_.put(copy.block_hash, copy.db_encode()));
       assert(height_view_.put(copy.height, copy.block_hash));
       attach_orphan(copy);
-      if (copy.height > tip_.height) {
-        tip_ = copy;
-      }
+      update_tip(copy);
       return;
     }
   }
@@ -154,19 +152,31 @@ bool Chain::attach_orphan(const BlockHeader &hdr) {
   assert(orphan_view_.erase(hdr.block_hash));
   log->warn("attached orphan {}", orphan);
 
-  if (orphan.height > tip_.height) {
-    tip_ = orphan;
-  }
+  update_tip(orphan);
 
   // look for orphans recursively
   attach_orphan(orphan);
   return true;
 }
 
-void Chain::save_tip() {
-  assert(tip_.block_hash != empty_hash);
+void Chain::update_tip(const BlockHeader &hdr) {
+  if (hdr.height < tip_.height) {
+    return;
+  }
+  assert(hdr.height == tip_.height + 1);
+  tip_ = hdr;
+}
+
+bool Chain::save_tip(bool check) {
+  if (check) {
+    assert(!tip_.is_empty());
+    assert(!tip_.is_orphan());
+  }
   auto s = db_->Put(write_opts, tip_key, encode_hash(tip_.block_hash));
-  assert(s.ok());
-  log->info("new chain tip {}", tip_);
+  log->debug("saved chain tip {}", tip_);
+  if (check) {
+    assert(s.ok());
+  }
+  return s.ok();
 }
 }  // namespace spv

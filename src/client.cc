@@ -211,7 +211,7 @@ void Client::notify_connected(Connection *conn) {
   }
 }
 
-void Client::notify_peer(const NetAddr &addr) {
+void Client::notify_peer(Connection *conn, const NetAddr &addr) {
   auto pr = peers_.insert(addr);
   if (pr.second) {
     log->info("added new peer {}, peer list size {}", addr, peers_.size());
@@ -252,12 +252,17 @@ void Client::sync_more_headers(Connection *conn) {
   conn->get_headers(chain_.tip());
 }
 
-void Client::notify_headers(const std::vector<BlockHeader> &block_headers) {
+void Client::notify_headers(Connection *conn,
+                            const std::vector<BlockHeader> &block_headers) {
   cancel_hdr_timeout();
   if (block_headers.empty() && chain_.tip_is_recent()) {
     log->info("header syncing finished, tip is {}", chain_.tip());
     need_headers_ = false;
     return;
+  }
+  if (block_headers.size() < 2000) {
+    log->warn("got {} new headers, last is {}", block_headers.size(),
+              *block_headers.end());
   }
 
   for (const auto &hdr : block_headers) {
@@ -271,6 +276,7 @@ void Client::notify_headers(const std::vector<BlockHeader> &block_headers) {
     }
   }
   chain_.save_tip();
+  log->info("saved chain tip {} via peer {}", chain_.tip(), conn->peer());
   sync_more_headers();
 }
 

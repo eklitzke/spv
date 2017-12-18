@@ -88,10 +88,11 @@ class Client {
   void notify_connected(Connection *conn);
 
   // Add headers to the local copy of the chain.
-  void notify_headers(const std::vector<BlockHeader> &block_headers);
+  void notify_headers(Connection *conn,
+                      const std::vector<BlockHeader> &block_headers);
 
   // Connections call this method to notify the client of a new peer.
-  void notify_peer(const NetAddr &addr);
+  void notify_peer(Connection *conn, const NetAddr &addr);
 
   // notify that there was an error
   void notify_error(Connection *conn, const std::string &why);

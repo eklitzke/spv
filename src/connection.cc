@@ -206,7 +206,7 @@ void Connection::shutdown() {
 void Connection::handle_addr(AddrMsg* addrs) {
   bool new_peers = false;
   for (const auto& addr : addrs->addrs) {
-    client_->notify_peer(addr);
+    client_->notify_peer(this, addr);
     if (addr.addr != peer_.addr) {
       new_peers = true;
     }
@@ -232,7 +232,7 @@ void Connection::handle_getheaders(GetHeaders* headers) {
 void Connection::handle_headers(HeadersMsg* msg) {
   log->debug("headers message with {} block headers",
              msg->block_headers.size());
-  client_->notify_headers(msg->block_headers);
+  client_->notify_headers(this, msg->block_headers);
 }
 
 void Connection::handle_mempool(Mempool* pool) {

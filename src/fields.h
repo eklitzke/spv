@@ -136,12 +136,16 @@ struct BlockHeader {
 
   static BlockHeader genesis();
 
+  inline bool is_empty() const { return block_hash == empty_hash; }
+
   inline bool is_genesis() const {
     return block_hash == hash_t{0x00, 0x00, 0x00, 0x00, 0x09, 0x33, 0xea, 0x01,
                                 0xad, 0x0e, 0xe9, 0x84, 0x20, 0x97, 0x79, 0xba,
                                 0xae, 0xc3, 0xce, 0xd9, 0x0f, 0xa3, 0xf4, 0x08,
                                 0x71, 0x95, 0x26, 0xf8, 0xd7, 0x7f, 0x49, 0x43};
   }
+
+  inline bool is_orphan() const { return height == 0 && !is_genesis(); }
 
   // decode from db
   void db_decode(const std::string &s);
