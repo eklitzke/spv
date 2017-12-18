@@ -40,10 +40,11 @@ Build dependencies:
  * automake
  * pkg-config
  * [libuv](https://github.com/libuv/libuv) (version 1.x)
- * [librocksdb](http://rocksdb.org/)
+ * [librocksdb](http://rocksdb.org/) (version 3.x)
 
 Other dependencies/third party libs; these are all included as git subtrees:
 
+ * [calccrypto/uint256_t](https://github.com/calccrypto/uint256_t)
  * [gabime/spdlog](https://github.com/gabime/spdlog)
  * [jarro2783/cxxopts](https://github.com/jarro2783/cxxopts)
  * [okdshin/PicoSHA2](https://github.com/okdshin/PicoSHA2)
