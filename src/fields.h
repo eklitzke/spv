@@ -108,31 +108,34 @@ struct BlockHeader {
   hash_t prev_block;
   hash_t merkle_root;
   uint32_t timestamp;
-  uint32_t difficulty;
+  uint32_t bits;
   uint32_t nonce;
 
   // not encoded, for internal use only
   size_t height;
   hash_t block_hash;
+  double accumulated_work;
 
   BlockHeader()
       : version(0),
         prev_block(empty_hash),
         merkle_root(empty_hash),
         timestamp(0),
-        difficulty(0),
+        bits(0),
         nonce(0),
         height(0),
-        block_hash(empty_hash) {}
+        block_hash(empty_hash),
+        accumulated_work(0) {}
   BlockHeader(const BlockHeader &other)
       : version(other.version),
         prev_block(other.prev_block),
         merkle_root(other.merkle_root),
         timestamp(other.timestamp),
-        difficulty(other.difficulty),
+        bits(other.bits),
         nonce(other.nonce),
         height(other.height),
-        block_hash(other.block_hash) {}
+        block_hash(other.block_hash),
+        accumulated_work(other.accumulated_work) {}
 
   static BlockHeader genesis();
 
@@ -146,6 +149,11 @@ struct BlockHeader {
   }
 
   inline bool is_orphan() const { return height == 0 && !is_genesis(); }
+
+  // get the work required to mine this block
+  double work_required() const;
+
+  void daisy_chain(const BlockHeader &prev);
 
   // decode from db
   void db_decode(const std::string &s);

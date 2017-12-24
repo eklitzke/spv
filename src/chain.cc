@@ -114,8 +114,7 @@ void Chain::put_block_header(const BlockHeader &hdr, bool check_duplicate) {
     if (prev_block.is_genesis() || prev_block.height) {
       // insert the block with the correct block height
       BlockHeader copy(hdr);
-      copy.height = prev_block.height + 1;
-      check_checkpoint(copy);
+      copy.daisy_chain(prev_block);
       assert(hdr_view_.put(copy.block_hash, copy.db_encode()));
       assert(height_view_.put(copy.height, copy.block_hash));
       attach_orphan(copy);

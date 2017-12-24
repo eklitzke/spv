@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <iostream>
 
 #include "./decoder.h"
 #include "./encoder.h"
@@ -32,7 +33,7 @@ std::ostream &operator<<(std::ostream &o, const spv::BlockHeader &hdr) {
 
   o << "BlockHeader(hash=" << hdr.block_hash << " time=" << time_buf;
   if (hdr.height) {
-    o << " height=" << hdr.height;
+    o << " height=" << hdr.height << ", log2_work = " << hdr.accumulated_work;
   }
   return o << ")";
 }
@@ -42,15 +43,30 @@ std::ostream &operator<<(std::ostream &o, const spv::NetAddr &addr) {
            << ")";
 }
 
+inline double log2(double val) { return log(val) / log(2.0); }
+inline double pow2(double val) { return pow(2, val); }
+
 namespace spv {
 std::string BlockHeader::db_encode() const {
   Encoder enc;
   enc.push(*this, false);
   enc.push(this->height);
+  enc.push(this->accumulated_work);
 
   size_t sz;
   std::unique_ptr<char[]> data = enc.serialize(sz, false);
   return {data.get(), sz};
+}
+
+double BlockHeader::work_required() const {
+  uint32_t low_bits = bits & 0xffffff;
+  uint32_t high_bits = (bits & 0xff000000) >> 24;
+  double difficulty = low_bits * pow(2, 8 * (high_bits - 3));
+  std::cerr << "bits = " << bits << ", low_bits = " << low_bits
+            << ", high_bits = " << high_bits << ", difficulty = " << difficulty
+            << std::endl;
+
+  return difficulty * (1UL << 48) / 0xffff;
 }
 
 BlockHeader BlockHeader::genesis() {
@@ -59,13 +75,28 @@ BlockHeader BlockHeader::genesis() {
               genesis_block_hdr.size());
   dec.pull(hdr, false);
   assert(hdr.is_genesis());
+  double req = hdr.work_required();
+  std::cerr << "work required: " << req << std::endl;
+  hdr.accumulated_work = hdr.work_required();
   return hdr;
+}
+
+void BlockHeader::daisy_chain(const BlockHeader &prev) {
+  assert(height == 0);
+  assert(prev.block_hash == prev_block);
+  assert(prev.height > 0 || prev.is_genesis());
+  assert(prev.accumulated_work > 0);
+
+  height = prev.height + 1;
+  accumulated_work = log2(work_required() + pow2(prev.accumulated_work));
+  assert(accumulated_work >= prev.accumulated_work);
 }
 
 void BlockHeader::db_decode(const std::string &s) {
   Decoder dec(s.c_str(), s.size());
   dec.pull(*this, false);
   dec.pull(height);
+  dec.pull(accumulated_work);
   assert(!dec.bytes_remaining());
 }
 

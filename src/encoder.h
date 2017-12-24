@@ -57,6 +57,12 @@ class Encoder : public Buffer {
     append(&enc_val, sizeof enc_val);
   }
 
+  // XXX: danger, only used to push accumulated PoW to database
+  void push(double val) {
+    uint64_t *pval = reinterpret_cast<uint64_t *>(&val);
+    push(*pval);
+  }
+
   void push(CCode ccode) { push(static_cast<uint8_t>(ccode)); }
 
   void push(InvType inv) { push(static_cast<uint32_t>(inv)); }
@@ -112,7 +118,7 @@ class Encoder : public Buffer {
     push(hdr.prev_block);
     push(hdr.merkle_root);
     push(hdr.timestamp);
-    push(hdr.difficulty);
+    push(hdr.bits);
     push(hdr.nonce);
     if (push_tx_count) push_varint(0);
   }

@@ -117,6 +117,14 @@ struct Decoder {
     out = be16toh(out);
   }
 
+  // XXX: danger, only used to pull accumulated PoW from database
+  void pull(double &val) {
+    uint64_t ival;
+    pull(ival);
+    double *pval = reinterpret_cast<double *>(&ival);
+    val = *pval;
+  }
+
   void pull(CCode &ccode) {
     uint8_t int_code;
     pull(int_code);
@@ -177,7 +185,7 @@ struct Decoder {
     pull(hdr.prev_block);
     pull(hdr.merkle_root);
     pull(hdr.timestamp);
-    pull(hdr.difficulty);
+    pull(hdr.bits);
     pull(hdr.nonce);
 
     // calculate the hash of this block

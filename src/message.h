@@ -56,7 +56,7 @@ struct Block : Message {
   hash_t prev_block;
   hash_t merkle_root;
   uint32_t timestamp;
-  uint32_t difficulty;
+  uint32_t bits;
   uint32_t nonce;
   std::vector<Tx> txns;
 
